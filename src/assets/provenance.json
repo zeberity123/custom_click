@@ -1,0 +1,20 @@
+{
+  "source": "1_シルブプレジデント_176.wav",
+  "sampleRate": 48000,
+  "format": "PCM signed 16-bit mono",
+  "extraction": "Left channel copied without alteration; source channels are identical.",
+  "samples": {
+    "high": {
+      "startFrame": 0,
+      "frames": 5760,
+      "pcmSha256": "649697f66d960c23c7e4bdb455bc98935f3d1bcfd5b5271c8c958746fd1085d8",
+      "peak": 32768
+    },
+    "low": {
+      "startFrame": 8181,
+      "frames": 5760,
+      "pcmSha256": "7410989a0a5ad772f5376479026ba6d9ac6fdf522a8f639ff1098df53d6e38f0",
+      "peak": 32768
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "click-studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A precise desktop metronome with clicks extracted from your recordings.",
+  "main": "desktop/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "dev": "node scripts/serve.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:desktop": "node scripts/smoke.mjs",
+    "package": "node scripts/package.mjs"
+  },
+  "devDependencies": {
+    "@electron/packager": "^20.3.0",
+    "electron": "^44.4.5",
+    "playwright": "^1.63.0"
+  }
+}

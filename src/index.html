@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'">
+  <meta name="theme-color" content="#101513">
+  <title>Click — Metronome</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <a class="brand" href="#" aria-label="Click home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>click<span class="brand-period">.</span></a>
+      <span class="header-caption">A LITTLE RHYTHM. A LOT OF FOCUS.</span>
+      <span class="desktop-badge"><span></span> DESKTOP</span>
+    </header>
+    <main>
+      <div class="page-heading"><div><div class="eyebrow">YOUR PRACTICE, IN TIME</div><h1>Find your rhythm.</h1></div><div class="engine-status"><span id="status-led"></span><span id="status-text">Ready when you are</span></div></div>
+      <div id="error" class="error-banner" role="alert" hidden></div>
+      <div class="workspace">
+        <section class="metronome panel" aria-label="Metronome">
+          <div class="panel-top"><span class="section-label">TEMPO</span><span id="tempo-name" class="tempo-name">ALLEGRO</span></div>
+          <div class="tempo-control">
+            <button class="step-button" id="decrease" aria-label="Decrease tempo">−</button>
+            <div class="tempo-number"><input id="bpm" type="number" min="10" max="300" step="1" value="176" aria-label="Tempo in beats per minute"><span>BEATS PER MINUTE</span></div>
+            <button class="step-button" id="increase" aria-label="Increase tempo">+</button>
+          </div>
+          <div class="tempo-slider"><input id="tempo-range" type="range" min="10" max="300" value="176" aria-label="Tempo"><div class="range-endpoints"><span>10 BPM</span><span>300 BPM</span></div></div>
+          <div class="tap-row"><span>Or feel it out</span><button id="tap" class="tap-button">Tap tempo <kbd>T</kbd></button><span id="tap-hint">Tap at least twice</span></div>
+          <div class="beat-section"><div class="beat-heading"><span class="section-label">BEAT PATTERN</span><span>Click a beat to switch pitch</span></div><div id="beats" class="beats" aria-label="Beat pitch controls"></div><div class="beat-legend"><span><i class="high-key"></i> High</span><span><i class="low-key"></i> Low</span><span class="beat-unit" id="beat-unit">1 beat = quarter note</span></div></div>
+          <div class="transport"><button id="reset" class="reset-button" aria-label="Reset to first beat" title="Reset to first beat (R)">↺</button><button id="play" class="play-button"><span id="play-icon" aria-hidden="true">▶</span><span id="play-label">Start metronome</span><kbd>SPACE</kbd></button></div>
+          <div class="transport-caption"><span id="position">BAR 01 <span>·</span> BEAT 01</span><span id="play-state">LET’S MAKE SOME TIME</span></div>
+        </section>
+        <aside class="settings-column">
+          <section class="panel rhythm-panel"><div class="panel-top"><span class="section-label">RHYTHM</span><span class="panel-icon" aria-hidden="true">♬</span></div>
+            <label class="field-label" for="meter">Time signature</label><div class="meter-row"><select id="meter"><option value="4/4">4 / 4 — Common time</option><option value="3/4">3 / 4 — Waltz</option><option value="2/4">2 / 4 — March</option><option value="6/8">6 / 8 — Compound</option><option value="9/8">9 / 8 — Compound</option><option value="12/8">12 / 8 — Compound</option><option value="5/4">5 / 4 — Asymmetric</option><option value="7/8">7 / 8 — Asymmetric</option><option value="custom">Custom signature</option></select></div>
+            <div id="custom-meter" class="custom-meter" hidden><label>Beats <input id="numerator" type="number" min="1" max="12" value="4"></label><span>/</span><label>Note <select id="denominator"><option>2</option><option selected>4</option><option>8</option><option>16</option></select></label></div>
+            <div class="field-label subdivision-label">Click division <span id="division-name">Eighth note</span></div>
+            <div class="note-options" role="group" aria-label="Click division"><button data-note="whole" aria-label="Whole note" aria-pressed="false"><span>𝅝</span><small>1</small></button><button data-note="half" aria-label="Half note" aria-pressed="false"><span>𝅗𝅥</span><small>1/2</small></button><button data-note="quarter" aria-label="Quarter note" aria-pressed="false"><span>♩</span><small>1/4</small></button><button data-note="eighth" aria-label="Eighth note" aria-pressed="true"><span>♪</span><small>1/8</small></button><button data-note="sixteenth" aria-label="Sixteenth note" aria-pressed="false"><span>♬</span><small>1/16</small></button></div>
+            <label class="dotted-row" for="dotted"><span><b class="dot-symbol">•</b> Dotted note <small>× 1.5 duration</small></span><input id="dotted" class="switch" type="checkbox"></label>
+            <p class="rhythm-help">BPM counts quarter notes. Dotted clicks flow across bar lines.</p>
+          </section>
+          <section class="panel sound-panel"><div class="panel-top"><span class="section-label">SOUND</span><span class="panel-icon" aria-hidden="true">≋</span></div>
+            <div class="sample-card"><div class="sample-icon" aria-hidden="true">▥</div><div><strong>Reference click</strong><span>Your Cubase recording · 48 kHz</span></div><span class="sample-check" aria-label="Loaded">✓</span></div>
+            <canvas id="waveform" width="640" height="80" aria-label="Reference click waveform"></canvas>
+            <div class="preview-row"><span>Hear the original</span><button id="preview-high">High ↗</button><button id="preview-low">Low ↘</button></div>
+            <div class="slider-heading"><label for="volume">Volume</label><output id="volume-value" for="volume">65%</output></div><input id="volume" type="range" min="0" max="100" value="65">
+            <div class="slider-heading pan-heading"><label for="pan">Stereo pan</label><button id="center-pan" title="Reset pan to center"><output id="pan-value" for="pan">Center</output> ↺</button></div><input id="pan" type="range" min="-100" max="100" value="0"><div class="range-endpoints"><span>L</span><span>CENTER</span><span>R</span></div>
+          </section>
+        </aside>
+      </div>
+      <footer><span><span class="footer-dot"></span> Less distraction. More music.</span><span><kbd>SPACE</kbd> play / pause <span class="footer-divider">/</span> <kbd>T</kbd> tap <span class="footer-divider">/</span> <kbd>↑</kbd> <kbd>↓</kbd> tempo</span></footer>
+    </main>
+  </div>
+</body>
+</html>

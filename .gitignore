@@ -1,0 +1,6 @@
+node_modules/
+release/
+artifacts/
+.npm-cache/
+.electron-cache/
+__pycache__/
