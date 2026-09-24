@@ -37,8 +37,13 @@ export async function launchPortable(env) {
     },
     async close() {
       const session = await browser.newBrowserCDPSession();
-      await session.send('Browser.close').catch(() => {});
-      await browser.close();
+      const disconnected = new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('Portable test app did not close.')), 10000);
+        browser.once('disconnected', () => { clearTimeout(timer); resolve(); });
+      });
+      // Browser.close can disconnect CDP before its command response arrives.
+      void session.send('Browser.close').catch(() => {});
+      await disconnected;
     },
   };
 }
