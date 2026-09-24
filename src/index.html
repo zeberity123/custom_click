@@ -39,8 +39,12 @@
             <div id="custom-meter" class="custom-meter" hidden><label>Beats <input id="numerator" type="number" min="1" max="12" value="4"></label><span>/</span><label>Note <select id="denominator"><option>2</option><option selected>4</option><option>8</option><option>16</option></select></label></div>
             <div class="field-label subdivision-label">Click division <span id="division-name">Eighth note</span></div>
             <div class="note-options" role="group" aria-label="Click division"><button data-note="whole" aria-label="Whole note" aria-pressed="false"><span>𝅝</span><small>1</small></button><button data-note="half" aria-label="Half note" aria-pressed="false"><span>𝅗𝅥</span><small>1/2</small></button><button data-note="quarter" aria-label="Quarter note" aria-pressed="false"><span>♩</span><small>1/4</small></button><button data-note="eighth" aria-label="Eighth note" aria-pressed="true"><span>♪</span><small>1/8</small></button><button data-note="sixteenth" aria-label="Sixteenth note" aria-pressed="false"><span>♬</span><small>1/16</small></button></div>
-            <label class="dotted-row" for="dotted"><span><b class="dot-symbol">•</b> Dotted note <small>× 1.5 duration</small></span><input id="dotted" class="switch" type="checkbox"></label>
-            <p class="rhythm-help">BPM counts quarter notes. Dotted clicks flow across bar lines.</p>
+            <div class="pattern-options" role="group" aria-label="Quarter-note beat patterns">
+              <button data-note="triplet" aria-label="Triplet" aria-pressed="false" title="Three evenly spaced hits per quarter note"><span class="pattern-slots" aria-hidden="true"><i></i><i></i><i></i></span><strong>Triplet</strong><small>1 · 2 · 3</small></button>
+              <button data-note="triplet-skip" aria-label="Triplet: first and third only" aria-pressed="false" title="Triplet with a rest on the second note"><span class="pattern-slots" aria-hidden="true"><i></i><i class="rest"></i><i></i></span><strong>Triplet</strong><small>1 &amp; 3 only</small></button>
+              <button data-note="sixteenth-skip" aria-label="Sixteenths: first and fourth only" aria-pressed="false" title="Four sixteenth-note slots, with rests on the second and third"><span class="pattern-slots" aria-hidden="true"><i></i><i class="rest"></i><i class="rest"></i><i></i></span><strong>16ths</strong><small>1 &amp; 4 only</small></button>
+            </div>
+            <p class="rhythm-help">Each pattern spans one quarter-note beat. Hollow dots are rests.</p>
           </section>
           <section class="panel sound-panel"><div class="panel-top"><span class="section-label">SOUND</span><span class="panel-icon" aria-hidden="true">≋</span></div>
             <div class="sample-card"><div class="sample-icon" aria-hidden="true">▥</div><div><strong>Reference click</strong><span>Your Cubase recording · 48 kHz</span></div><span class="sample-check" aria-label="Loaded">✓</span></div>

@@ -11,7 +11,7 @@ const outputs = await packager({
   tmpdir: path.resolve('artifacts/package-temp'),
   download: { cacheRoot: path.resolve('.electron-cache') },
   electronZipDir: existsSync(localZip) ? path.dirname(localZip) : undefined,
-  ignore: [/^\/(release|tests|scripts|artifacts|\.npm-cache|\.electron-cache|\.git)(\/|$)/],
+  ignore: [/^\/(release|tests|scripts|artifacts|\.npm-cache|\.electron-cache|\.builder-cache|\.git)(\/|$)/],
   win32metadata: { CompanyName: 'Click Studio', FileDescription: 'Click — Desktop Metronome', ProductName: 'Click' },
 });
 for (const output of outputs) console.log(`Built ${output}`);

@@ -1,20 +1,28 @@
 {
   "name": "click-studio",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "A precise desktop metronome with clicks extracted from your recordings.",
+  "author": "zeberity123",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zeberity123/custom_click.git"
+  },
   "main": "desktop/main.cjs",
   "scripts": {
     "start": "electron .",
     "dev": "node scripts/serve.mjs",
     "test": "node --test tests/*.test.mjs",
     "test:desktop": "node scripts/smoke.mjs",
-    "package": "node scripts/package.mjs"
+    "package": "node scripts/package.mjs",
+    "package:portable": "electron-builder --config electron-builder.json --win portable --x64 --publish never",
+    "test:portable": "node scripts/smoke.mjs --portable"
   },
   "devDependencies": {
     "@electron/packager": "^20.3.0",
     "electron": "^44.4.5",
+    "electron-builder": "^26.15.3",
     "playwright": "^1.63.0"
   }
 }

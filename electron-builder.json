@@ -1,0 +1,15 @@
+{
+  "appId": "com.zeberity123.customclick",
+  "productName": "Click",
+  "directories": { "output": "release/portable" },
+  "files": ["desktop/**/*", "src/**/*", "package.json"],
+  "electronDist": "node_modules/electron/dist",
+  "asar": true,
+  "npmRebuild": false,
+  "win": {
+    "target": [{ "target": "portable", "arch": ["x64"] }],
+    "artifactName": "Custom-Click-${version}-win-${arch}.exe",
+    "signAndEditExecutable": false
+  },
+  "portable": { "requestExecutionLevel": "user" }
+}

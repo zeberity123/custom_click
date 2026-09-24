@@ -24,9 +24,32 @@ test('whole, half, quarter, eighth, and sixteenth notes have musical durations',
     assert.equal(clicks({ note }, 192).length, count);
   }
 });
-test('dotted notes retain their duration across bar lines', () => {
-  assert.deepEqual(clicks({ note: 'quarter', dotted: true }, 400).map(event => event.tick), [0, 72, 144, 216, 288, 360]);
+test('long notes retain their duration across bar lines', () => {
   assert.deepEqual(clicks({ note: 'whole', numerator: 3 }, 400).map(event => event.tick), [0, 192, 384]);
+});
+test('triplets place three equal hits within each quarter note', () => {
+  assert.deepEqual(clicks({ note: 'triplet' }, 96).map(event => event.tick), [0, 16, 32, 48, 64, 80]);
+  assert.equal(clicks({ note: 'triplet' }, 192).length, 12);
+});
+test('sparse triplets rest on the second slot without shortening the beat', () => {
+  const events = clicks({ note: 'triplet-skip' }, 96);
+  assert.deepEqual(events.map(event => event.tick), [0, 32, 48, 80]);
+  assert.deepEqual(events.map(event => event.high), [true, false, true, false]);
+});
+test('sparse sixteenths rest on slots two and three without shortening the beat', () => {
+  assert.deepEqual(clicks({ note: 'sixteenth-skip' }, 96).map(event => event.tick), [0, 36, 48, 84]);
+});
+test('patterns use quarter-note BPM in other meters and continue across odd bar lines', () => {
+  assert.deepEqual(clicks({ note: 'triplet', numerator: 6, denominator: 8 }, 144).map(event => event.tick), [0, 16, 32, 48, 64, 80, 96, 112, 128]);
+  assert.deepEqual(clicks({ note: 'sixteenth-skip', numerator: 7, denominator: 8 }, 240).map(event => event.tick), [0, 36, 48, 84, 96, 132, 144, 180, 192, 228]);
+});
+test('saved dotted settings retain the straight division and other preferences', () => {
+  const settings = sanitize({ note: 'quarter', dotted: true, bpm: 132, pan: 25 });
+  assert.equal(settings.note, 'quarter');
+  assert.equal(settings.bpm, 132);
+  assert.equal(settings.pan, 25);
+  assert.equal(Object.hasOwn(settings, 'dotted'), false);
+  assert.deepEqual(clicks(settings, 144).map(event => event.tick), [0, 48, 96]);
 });
 test('invalid saved settings are sanitized; custom meter supports 1–12 beats', () => {
   const settings = sanitize({ bpm: 999, numerator: -7, denominator: 3, note: 'invalid', pan: -300, volume: 'x', accents: ['false'] });

@@ -2,13 +2,14 @@ import { _electron as electron } from 'playwright';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
+import { launchPortable } from './launch-portable.mjs';
 
 await mkdir('artifacts', { recursive: true });
 const env = { ...process.env };
 delete env.ELECTRON_RUN_AS_NODE;
 const packaged = process.argv.includes('--packaged');
 const profile = '--user-data-dir=' + path.resolve(`artifacts/${packaged ? 'packaged' : 'test'}-profile`);
-const app = await electron.launch({
+const app = process.argv.includes('--portable') ? await launchPortable(env) : await electron.launch({
   ...(packaged ? { executablePath: path.resolve('release/Click-win32-x64/Click.exe') } : {}),
   args: packaged ? [profile] : ['.', profile], env,
 });
@@ -29,6 +30,19 @@ try {
   assert.equal(await page.locator('#play-label').textContent(), 'Resume metronome');
   await page.locator('#reset').click();
   assert.equal(await page.locator('#play-label').textContent(), 'Start metronome');
+  assert.equal(await page.locator('#dotted').count(), 0);
+  for (const note of ['triplet', 'triplet-skip', 'sixteenth-skip']) {
+    await page.locator(`[data-note="${note}"]`).click();
+    assert.equal(await page.locator('[data-note][aria-pressed="true"]').count(), 1);
+    assert.equal(await page.locator(`[data-note="${note}"]`).getAttribute('aria-pressed'), 'true');
+    await page.reload();
+    assert.equal(await page.locator(`[data-note="${note}"]`).getAttribute('aria-pressed'), 'true');
+    await page.locator('#play').click();
+    await page.getByRole('button', { name: 'Pause metronome' }).waitFor();
+    await page.waitForFunction(() => document.querySelector('#position').textContent.includes('BAR 02'));
+    assert.equal(await page.locator('#error').isHidden(), true);
+    await page.locator('#reset').click();
+  }
   await page.locator('.beat-button').nth(1).click();
   assert.equal(await page.locator('.beat-button').nth(1).getAttribute('data-high'), 'false');
   await page.locator('#meter').selectOption('6/8');
@@ -39,7 +53,7 @@ try {
   await page.locator('#denominator').selectOption('16');
   assert.equal(await page.locator('.beat-button').count(), 11);
   await page.getByRole('button', { name: 'Sixteenth note', exact: true }).click();
-  await page.locator('#dotted').check();
+  await page.getByRole('button', { name: 'Triplet: first and third only', exact: true }).click();
   await page.locator('#bpm').fill('500');
   await page.locator('#bpm').press('Enter');
   assert.equal(await page.locator('#bpm').inputValue(), '300');
@@ -53,10 +67,10 @@ try {
   await page.reload();
   assert.equal(await page.locator('#bpm').inputValue(), '10');
   assert.equal(await page.locator('.beat-button').count(), 11);
-  assert.equal(await page.locator('#dotted').isChecked(), true);
+  assert.equal(await page.locator('[data-note="triplet-skip"]').getAttribute('aria-pressed'), 'true');
   await page.locator('#meter').selectOption('4/4');
   await page.getByRole('button', { name: 'Eighth note', exact: true }).click();
-  await page.locator('#dotted').uncheck();
+  assert.equal(await page.locator('.pattern-options [aria-pressed="true"]').count(), 0);
   await page.locator('#bpm').fill('176');
   await page.locator('#bpm').press('Enter');
   await page.locator('h1').click();
@@ -93,5 +107,5 @@ try {
   assert.ok(overflow.scroll <= overflow.width, JSON.stringify(overflow));
   assert.deepEqual(errors, []);
   await page.evaluate(() => localStorage.clear());
-  console.log('PASS: desktop audio playback, beat patterns, custom meter, tempo bounds, dotted notes, persistence, shortcuts, tap tempo, stereo rendering, narrow layout, and no renderer errors.');
+  console.log('PASS: desktop audio playback, all three rhythmic patterns, custom meter, tempo bounds, persistence, shortcuts, tap tempo, stereo rendering, narrow layout, and no renderer errors.');
 } finally { await app.close(); }

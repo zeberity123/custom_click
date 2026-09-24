@@ -2,20 +2,24 @@
 
 A Windows desktop metronome built around the actual high and low clicks in your Cubase recordings.
 
+For another Windows PC, download **Custom-Click-0.2.0-win-x64.exe** from [GitHub Releases](https://github.com/zeberity123/custom_click/releases/latest), copy that single file, and double-click it. No installer, Node.js, or separate sound files are needed. This build targets Windows x64. It extracts its bundled runtime into a temporary folder on launch and saves preferences in your Windows user profile. The executable is unsigned.
+
 To run from a fresh clone, follow the development setup below. You can then double-click **Launch Click.cmd** in this folder. After running `npm run package`, the Windows application is at **release/Click-win32-x64/Click.exe**. Keep the entire `Click-win32-x64` folder together when moving it to another PC; it runs without Node.js installed. Build outputs and dependencies are not committed to this repository.
 
 ## Controls
 
 - Tempo: **10–300 BPM**, editable number, slider, or +/− buttons. Hold Shift when clicking +/− for steps of 10.
 - Time signature: 4/4, 3/4, 2/4, 6/8, 9/8, 12/8, 5/4, 7/8, or custom (1–12 beats and a denominator of 2, 4, 8, or 16).
-- Click division: whole, half, quarter, eighth, or sixteenth note. The dotted switch multiplies the duration by 1.5.
+- Click division: whole, half, quarter, eighth, or sixteenth note, plus three quarter-note patterns: triplet (all three hits), triplet with only hits 1 and 3, and sixteenths with only hits 1 and 4. Hollow dots indicate rests. Choose one division or pattern at a time.
 - Beat dots: one per numerator beat. Click to toggle high/low pitch; when paused, the selected sound is previewed. Subdivisions between beats use the low sample.
 - Tap tempo: click **Tap tempo** or press **T** at least twice. Averages the most recent six taps; resets after 6.5 seconds without a tap.
 - Volume and stereo panning: the Center label resets panning. Use headphones to hear left/right separation.
 - Space: play/pause. R: reset to the beginning. Up/Down: adjust tempo; Shift for increments of 10. Shortcuts yield to input fields.
 - Settings save locally between sessions. Playback never starts automatically.
 
-BPM always means **quarter notes per minute**, including in compound meters. In 6/8, six dots mark the six eighth notes; there are three quarter-note units in the bar. Tap quarter notes to set this BPM. The selected click division is independent of the visual beat pulse. Long and dotted notes continue across bar lines without being shortened. Changing the meter or division restarts the pattern at beat one. Pause retains the musical position; reset stops and returns to beat one.
+BPM always means **quarter notes per minute**, including in compound meters. In 6/8, six dots mark the six eighth notes; there are three quarter-note units in the bar. Tap quarter notes to set this BPM. The selected click division is independent of the visual beat pulse. Long notes and quarter-note patterns continue across bar lines without being shortened. Changing the meter or division restarts the pattern at beat one. Pause retains the musical position; reset stops and returns to beat one.
+
+Within each quarter note, the triplet plays at 0, 1/3, and 2/3; the sparse triplet plays at 0 and 2/3; the sparse sixteenths play at 0 and 3/4. Rests keep their full duration. These replace the former dotted switch; previously saved dotted settings now use their straight division, with other preferences preserved.
 
 ## Reference sound
 
@@ -43,6 +47,8 @@ npm start
 npm test            # Musical timing, PCM hashes, pause/reset, tap tempo
 npm run test:desktop # Actual Electron UI, audio startup, panning, persistence
 npm run package     # Windows x64 app in release/
+npm run package:portable # Single-file Windows x64 executable in release/portable/
+npm run test:portable    # Test the standalone executable from a separate folder
 npm run dev         # Browser preview at http://127.0.0.1:4173
 ```
 

@@ -3,4 +3,5 @@ release/
 artifacts/
 .npm-cache/
 .electron-cache/
+.builder-cache/
 __pycache__/

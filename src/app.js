@@ -14,7 +14,7 @@ let startRequest = 0;
 let tapTimer;
 let clearBeatTimer;
 const tapTempo = new TapTempo();
-const noteNames = { whole: 'Whole note', half: 'Half note', quarter: 'Quarter note', eighth: 'Eighth note', sixteenth: 'Sixteenth note' };
+const noteNames = { whole: 'Whole note', half: 'Half note', quarter: 'Quarter note', eighth: 'Eighth note', sixteenth: 'Sixteenth note', triplet: 'Triplet', 'triplet-skip': 'Triplet · 1 & 3', 'sixteenth-skip': '16ths · 1 & 4' };
 const denominatorNames = { 2: 'half', 4: 'quarter', 8: 'eighth', 16: 'sixteenth' };
 const audio = new ClickAudio(event => {
   if (playing) {
@@ -34,7 +34,7 @@ const audio = new ClickAudio(event => {
 function showError(message) { $('#error').textContent = message; $('#error').hidden = false; }
 function persist() { try { localStorage.setItem(storageKey, JSON.stringify(config)); } catch { /* Ephemeral sessions can still play. */ } }
 function update(patch) {
-  const rhythmChanged = ['numerator', 'denominator', 'note', 'dotted'].some(key => Object.hasOwn(patch, key) && patch[key] !== config[key]);
+  const rhythmChanged = ['numerator', 'denominator', 'note'].some(key => Object.hasOwn(patch, key) && patch[key] !== config[key]);
   config = sanitize({ ...config, ...patch });
   if (rhythmChanged) { events = []; activeBeat = -1; $('#position').textContent = 'BAR 01 · BEAT 01'; }
   audio.configure(config);
@@ -54,9 +54,8 @@ function render() {
   $('#custom-meter').hidden = $('#meter').value !== 'custom';
   $('#numerator').value = config.numerator;
   $('#denominator').value = config.denominator;
-  $('#division-name').textContent = (config.dotted ? 'Dotted ' : '') + noteNames[config.note].toLowerCase();
+  $('#division-name').textContent = noteNames[config.note];
   document.querySelectorAll('[data-note]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.note === config.note)));
-  $('#dotted').checked = config.dotted;
   $('#volume').value = config.volume;
   $('#volume-value').textContent = `${config.volume}%`;
   $('#pan').value = config.pan;
@@ -171,7 +170,6 @@ $('#meter').addEventListener('change', event => {
 $('#numerator').addEventListener('change', event => update({ numerator: event.target.value }));
 $('#denominator').addEventListener('change', event => update({ denominator: Number(event.target.value) }));
 document.querySelectorAll('[data-note]').forEach(button => button.addEventListener('click', () => update({ note: button.dataset.note })));
-$('#dotted').addEventListener('change', event => update({ dotted: event.target.checked }));
 $('#volume').addEventListener('input', event => update({ volume: Number(event.target.value) }));
 $('#pan').addEventListener('input', event => update({ pan: Number(event.target.value) }));
 $('#center-pan').addEventListener('click', () => update({ pan: 0 }));

@@ -47,6 +47,48 @@ test('pause stops output and musical time; reset restarts on beat one', () => {
   assert.equal(processor.events[0].beat, 0);
   assert.equal(processor.events[0].bar, 1);
 });
+test('rendered patterns sound only the requested slots, including at tempo limits', () => {
+  const offsets = { triplet: [0, 1 / 3, 2 / 3], 'triplet-skip': [0, 2 / 3], 'sixteenth-skip': [0, 3 / 4] };
+  for (const bpm of [10, 176, 300]) {
+    for (const [note, fractions] of Object.entries(offsets)) {
+      const processor = new Processor();
+      send(processor, { type: 'samples', samples: { high: new Float32Array([1]), low: new Float32Array([.5]) } });
+      send(processor, { type: 'config', config: sanitize({ note, bpm }) });
+      send(processor, { type: 'start' });
+      const framesPerBeat = sampleRate * 60 / bpm;
+      const length = Math.floor(framesPerBeat * 4);
+      const hits = [];
+      const block = new Float32Array(128);
+      for (let frame = 0; frame < length; frame += 128) {
+        globalThis.currentTime = frame / sampleRate;
+        processor.process([], [[block]]);
+        for (let i = 0; i < block.length && frame + i < length; i++) {
+          if (block[i]) hits.push({ frame: frame + i, value: block[i] });
+        }
+      }
+      const expected = Array.from({ length: 4 }, (_, beat) => fractions.map(fraction => ({ frame: (beat + fraction) * framesPerBeat, value: fraction === 0 ? 1 : .5 }))).flat();
+      assert.equal(hits.length, expected.length, `${note} at ${bpm} BPM has no extra clicks in rests`);
+      hits.forEach((hit, i) => {
+        assert.ok(Math.abs(hit.frame - expected[i].frame) <= 1.000001, `${note} at ${bpm} BPM hit ${i}`);
+        assert.equal(hit.value, expected[i].value);
+      });
+    }
+  }
+});
+test('changing to a sparse pattern during playback restarts at the first hit', () => {
+  const processor = new Processor();
+  send(processor, { type: 'start' });
+  render(processor, .2);
+  send(processor, { type: 'config', config: sanitize({ note: 'triplet-skip' }) });
+  assert.equal(processor.tick, 0);
+  assert.equal(processor.remaining, 0);
+  processor.events.length = 0;
+  render(processor, .3);
+  const hits = processor.events.filter(event => event.click);
+  assert.equal(hits.length, 2);
+  assert.equal(hits[0].beat, 0);
+  assert.ok(Math.abs(hits[1].time - 60 / 176 * 2 / 3) <= 1 / sampleRate);
+});
 test('meter changes restart the bar and tempo changes keep the fractional phase', () => {
   const processor = new Processor();
   send(processor, { type: 'start' });

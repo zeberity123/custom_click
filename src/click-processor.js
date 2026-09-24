@@ -17,7 +17,7 @@ class ClickProcessor extends AudioWorkletProcessor {
         const previous = this.config;
         this.config = sanitize(data.config);
         this.remaining *= previous.bpm / this.config.bpm;
-        if (previous.numerator !== this.config.numerator || previous.denominator !== this.config.denominator || previous.note !== this.config.note || previous.dotted !== this.config.dotted) {
+        if (previous.numerator !== this.config.numerator || previous.denominator !== this.config.denominator || previous.note !== this.config.note) {
           this.tick = 0;
           this.remaining = 0;
         }
