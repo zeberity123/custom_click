@@ -23,9 +23,17 @@ final class ClickUITests: XCTestCase {
         app.buttons["Export MP3"].firstMatch.tap()
         app.buttons["Save MP3"].firstMatch.tap()
         XCTAssertTrue(app.navigationBars.firstMatch.waitForExistence(timeout: 60),app.debugDescription)
-        // The web dialog remains behind the native Files picker on iPad.
-        app.navigationBars.buttons["Cancel"].firstMatch.tap()
+        // iPad starts with a Cancel control; iPhone opens inside On My iPhone with Save.
+        // Scope to native navigation bars so the web dialog behind the picker isn't tapped.
+        let cancel = app.navigationBars.buttons["Cancel"].firstMatch
+        let savesFile = !cancel.exists
+        if savesFile {
+            let save = app.navigationBars.buttons["Save"].firstMatch
+            XCTAssertTrue(save.waitForExistence(timeout: 10),app.debugDescription)
+            save.tap()
+        } else { cancel.tap() }
         XCTAssertTrue(app.navigationBars.firstMatch.waitForNonExistence(timeout: 10))
+        if savesFile { XCTAssertTrue(app.staticTexts["MP3 saved."].firstMatch.waitForExistence(timeout: 10),app.debugDescription) }
         app.buttons["Close export"].firstMatch.tap()
         XCTAssertTrue(app.buttons["Save MP3"].firstMatch.waitForNonExistence(timeout: 10),app.debugDescription)
         let screenshot = XCTAttachment(screenshot: app.screenshot());screenshot.lifetime = .keepAlways;add(screenshot)

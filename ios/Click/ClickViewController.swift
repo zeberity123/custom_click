@@ -3,7 +3,7 @@ import WebKit
 import AVFoundation
 import MediaPlayer
 
-final class ClickViewController: UIViewController, WKNavigationDelegate, WKScriptMessageHandlerWithReply, UIDocumentPickerDelegate {
+final class ClickViewController: UIViewController, WKNavigationDelegate, WKScriptMessageHandlerWithReply, UIDocumentPickerDelegate, UIAdaptivePresentationControllerDelegate {
     private var web: WKWebView!
     private var server: AssetServer!
     private var origin: URL?
@@ -190,6 +190,7 @@ final class ClickViewController: UIViewController, WKNavigationDelegate, WKScrip
                 try FileManager.default.moveItem(at:url,to:destination);exportURL = destination;exportReply = reply
                 let picker = UIDocumentPickerViewController(forExporting:[destination],asCopy:true)
                 picker.delegate = self;present(picker,animated:true)
+                picker.presentationController?.delegate = self
             default: reply(nil,"Unknown request")
             }
         } catch { reply(nil,error.localizedDescription) }
@@ -201,6 +202,9 @@ final class ClickViewController: UIViewController, WKNavigationDelegate, WKScrip
     }
     func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) { finishExportReply(!urls.isEmpty) }
     func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) { finishExportReply(false) }
+    func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
+        if exportReply != nil { finishExportReply(false) }
+    }
     private func finishExportReply(_ saved: Bool) {
         let reply = exportReply;exportReply = nil;cancelExport();reply?(["saved":saved],nil)
     }
