@@ -21,15 +21,34 @@ try {
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   assert.equal(await page.locator('.beat-button').count(), 4);
+  assert.equal(await page.locator('#meter').count(), 0);
+  assert.equal(await page.locator('#custom-meter').isVisible(), true);
+  assert.equal(await page.locator('.beat-button.active').count(), 1);
   await page.screenshot({ path: 'artifacts/desktop.png' });
   await page.locator('#play').click();
   await page.getByRole('button', { name: 'Pause metronome' }).waitFor();
+  const beatContinuity = await page.evaluate(() => new Promise(resolve => {
+    const deadline = performance.now() + 900, beats = new Set();
+    let gaps = 0;
+    function sample() {
+      const active = document.querySelectorAll('.beat-button.active');
+      if (active.length !== 1) gaps++;
+      if (active[0]) beats.add(active[0].textContent);
+      if (performance.now() < deadline) requestAnimationFrame(sample);
+      else resolve({ gaps, beats: beats.size });
+    }
+    sample();
+  }));
+  assert.equal(beatContinuity.gaps, 0);
+  assert.ok(beatContinuity.beats > 1);
   await page.waitForFunction(() => document.querySelector('#position').textContent.includes('BAR 02'));
   assert.equal(await page.locator('#error').isHidden(), true);
   await page.locator('#play').click();
   assert.equal(await page.locator('#play-label').textContent(), 'Resume metronome');
+  assert.equal(await page.locator('.beat-button.active').count(), 1);
   await page.locator('#reset').click();
   assert.equal(await page.locator('#play-label').textContent(), 'Start metronome');
+  assert.equal(await page.locator('.beat-button.active .beat-orb').textContent(), '1');
   assert.equal(await page.locator('#dotted').count(), 0);
   for (const note of ['triplet', 'triplet-skip', 'sixteenth-skip']) {
     await page.locator(`[data-note="${note}"]`).click();
@@ -45,9 +64,10 @@ try {
   }
   await page.locator('.beat-button').nth(1).click();
   assert.equal(await page.locator('.beat-button').nth(1).getAttribute('data-high'), 'false');
-  await page.locator('#meter').selectOption('6/8');
+  await page.locator('#numerator').fill('6');
+  await page.locator('#numerator').press('Tab');
+  await page.locator('#denominator').selectOption('8');
   assert.equal(await page.locator('.beat-button').count(), 6);
-  await page.locator('#meter').selectOption('custom');
   await page.locator('#numerator').fill('11');
   await page.locator('#numerator').press('Tab');
   await page.locator('#denominator').selectOption('16');
@@ -68,12 +88,14 @@ try {
   assert.equal(await page.locator('#bpm').inputValue(), '10');
   assert.equal(await page.locator('.beat-button').count(), 11);
   assert.equal(await page.locator('[data-note="triplet-skip"]').getAttribute('aria-pressed'), 'true');
-  await page.locator('#meter').selectOption('4/4');
+  await page.locator('#numerator').fill('4');
+  await page.locator('#numerator').press('Tab');
+  await page.locator('#denominator').selectOption('4');
   await page.getByRole('button', { name: 'Eighth note', exact: true }).click();
   assert.equal(await page.locator('.pattern-options [aria-pressed="true"]').count(), 0);
   await page.locator('#bpm').fill('176');
   await page.locator('#bpm').press('Enter');
-  await page.locator('h1').click();
+  await page.locator('.metronome .section-label').first().click();
   await page.keyboard.press('Space');
   await page.getByRole('button', { name: 'Pause metronome' }).waitFor();
   await page.keyboard.press('Space');
@@ -105,6 +127,23 @@ try {
   await page.screenshot({ path: 'artifacts/narrow.png', fullPage: true });
   const overflow = await page.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth, elements: [...document.querySelectorAll('main *')].filter(element => element.getBoundingClientRect().right > innerWidth).map(element => [element.tagName, element.className, element.getBoundingClientRect().right]) }));
   assert.ok(overflow.scroll <= overflow.width, JSON.stringify(overflow));
+  // Browser safe areas reserve space for both transport and the drawer.
+  await page.evaluate(() => {
+    document.documentElement.style.setProperty('--safe-top', '28px');
+    document.documentElement.style.setProperty('--safe-bottom', '48px');
+  });
+  const brandBox = await page.locator('.brand').boundingBox();
+  const playBox = await page.locator('#play').boundingBox();
+  assert.ok(brandBox.y >= 28 && playBox.y + playBox.height <= 844 - 48);
+  await page.locator('#open-settings').click();
+  assert.equal(await page.locator('#settings-drawer').getAttribute('aria-modal'), 'true');
+  await page.locator('#volume').fill('70');
+  assert.equal(await page.locator('#volume-value').textContent(), '70%');
+  await page.setViewportSize({width:1100,height:880});
+  await page.waitForFunction(() => !document.documentElement.classList.contains('mobile'));
+  assert.equal(await page.locator('#settings-drawer').evaluate(element => element.inert), false);
+  assert.equal(await page.locator('.metronome').evaluate(element => element.inert), false);
+  assert.equal(await page.locator('#settings-drawer').getAttribute('aria-modal'), null);
   assert.deepEqual(errors, []);
   await page.evaluate(() => localStorage.clear());
   console.log('PASS: desktop audio playback, all three rhythmic patterns, custom meter, tempo bounds, persistence, shortcuts, tap tempo, stereo rendering, narrow layout, and no renderer errors.');

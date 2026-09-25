@@ -1,0 +1,28 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'com.zeberity123.customclick'
+    compileSdk 36
+    buildFeatures { buildConfig true }
+    defaultConfig {
+        applicationId 'com.zeberity123.customclick'
+        minSdk 31
+        targetSdk 36
+        versionCode 6
+        versionName '0.4.2'
+        testInstrumentationRunner 'android.test.InstrumentationTestRunner'
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    buildTypes {
+        debug { applicationIdSuffix '.debug' }
+        release { minifyEnabled false }
+    }
+    sourceSets.main.assets.srcDir layout.buildDirectory.dir('generated/webAssets')
+}
+
+tasks.register('syncWebAssets', Copy) {
+    from '../../src'
+    into layout.buildDirectory.dir('generated/webAssets/web')
+    exclude 'assets/*.ico'
+}
+tasks.named('preBuild').configure { dependsOn 'syncWebAssets' }

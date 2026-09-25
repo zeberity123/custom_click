@@ -1,9 +1,9 @@
 {
   "name": "click-studio",
-  "version": "0.2.0",
+  "version": "0.4.2",
   "private": true,
   "type": "module",
-  "description": "A precise desktop metronome with clicks extracted from your recordings.",
+  "description": "A precise desktop and Android metronome with reference click samples.",
   "author": "zeberity123",
   "repository": {
     "type": "git",
@@ -15,9 +15,14 @@
     "dev": "node scripts/serve.mjs",
     "test": "node --test tests/*.test.mjs",
     "test:desktop": "node scripts/smoke.mjs",
+    "test:features": "node scripts/test-features.mjs",
     "package": "node scripts/package.mjs",
     "package:portable": "electron-builder --config electron-builder.json --win portable --x64 --publish never",
-    "test:portable": "node scripts/smoke.mjs --portable"
+    "test:portable": "node scripts/smoke.mjs --portable",
+    "android:setup": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-android.ps1",
+    "android:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-android.ps1",
+    "test:android-engine": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-android-engine.ps1",
+    "test:android-ui": "node scripts/test-android-ui.mjs"
   },
   "devDependencies": {
     "@electron/packager": "^20.3.0",

@@ -5,3 +5,11 @@ artifacts/
 .electron-cache/
 .builder-cache/
 __pycache__/
+.android-sdk/
+.toolchains/
+.gradle-cache/
+android/.gradle/
+android/local.properties
+android/**/build/
+*.keystore
+*.jks

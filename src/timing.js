@@ -7,6 +7,7 @@ export const DEFAULTS = { bpm: 176, numerator: 4, denominator: 4, note: 'eighth'
 export function sanitize(input = {}) {
   const bounded = (x, fallback, min, max) => Number.isFinite(Number(x)) ? Math.min(max, Math.max(min, Number(x))) : fallback;
   const numerator = Math.round(bounded(input.numerator ?? 4, 4, 1, 12));
+  const automation = input.automation ?? {};
   return {
     bpm: Math.round(bounded(input.bpm ?? 176, 176, 10, 300)),
     numerator,
@@ -15,6 +16,12 @@ export function sanitize(input = {}) {
     volume: bounded(input.volume ?? 65, 65, 0, 100),
     pan: bounded(input.pan ?? 0, 0, -100, 100),
     accents: Array.from({ length: numerator }, (_, i) => typeof input.accents?.[i] === 'boolean' ? input.accents[i] : true),
+    automation: {
+      enabled: automation.enabled === true,
+      delta: Math.round(bounded(automation.delta ?? 5, 5, -100, 100)),
+      every: Math.round(bounded(automation.every ?? 4, 4, 1, 3600)),
+      unit: automation.unit === 'seconds' ? 'seconds' : 'bars',
+    },
   };
 }
 

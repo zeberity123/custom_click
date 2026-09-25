@@ -1,22 +1,89 @@
 import { DEFAULTS, sanitize, TapTempo } from './timing.js';
 import { ClickAudio } from './audio.js';
+import { NativeAudio } from './native-audio.js';
+import { t, initLanguage } from './i18n.js';
+import { setupExport } from './export-ui.js';
+
+const isAndroid = typeof window.NativeClick !== 'undefined';
+if (isAndroid) document.documentElement.classList.add('android');
 
 const $ = selector => document.querySelector(selector);
+const mobileQuery = matchMedia('(max-width: 650px)');
+const drawer = $('#settings-drawer');
+const drawerBackground = [...document.querySelectorAll('.app-header, .metronome, #error')];
+let drawerOpen = false;
+function setDrawer(open, restoreFocus = true) {
+  drawerOpen = open && document.documentElement.classList.contains('mobile');
+  document.documentElement.classList.toggle('drawer-open', drawerOpen);
+  $('#open-settings').setAttribute('aria-expanded', String(drawerOpen));
+  $('#drawer-backdrop').hidden = !drawerOpen;
+  drawer.inert = !drawerOpen && document.documentElement.classList.contains('mobile');
+  drawerBackground.forEach(element => { element.inert = drawerOpen; });
+  if (drawerOpen) {
+    drawer.setAttribute('role', 'dialog');
+    drawer.setAttribute('aria-modal', 'true');
+    $('#close-settings').focus({ preventScroll: true });
+  } else {
+    drawer.removeAttribute('role');
+    drawer.removeAttribute('aria-modal');
+    if (restoreFocus) $('#open-settings').focus({ preventScroll: true });
+  }
+}
+function syncMobileLayout() {
+  document.documentElement.classList.toggle('mobile', isAndroid || mobileQuery.matches);
+  setDrawer(false, false);
+}
+mobileQuery.addEventListener('change', syncMobileLayout);
+syncMobileLayout();
+$('#open-settings').addEventListener('click', () => setDrawer(true));
+$('#close-settings').addEventListener('click', () => setDrawer(false));
+$('#drawer-backdrop').addEventListener('click', () => setDrawer(false));
+document.addEventListener('keydown', event => {
+  if (!drawerOpen) return;
+  if (event.key === 'Escape') { event.preventDefault(); setDrawer(false); }
+  if (event.key === 'Tab') {
+    const controls = [...drawer.querySelectorAll('button, input, select')].filter(element => !element.disabled && element.getClientRects().length);
+    const first = controls[0], last = controls.at(-1);
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  }
+});
+// Horizontal swipes browse the right-hand drawer; sliders keep their own gestures.
+let swipe;
+document.addEventListener('pointerdown', event => {
+  swipe = null;
+  if (!document.documentElement.classList.contains('mobile') || !event.isPrimary || event.pointerType === 'mouse' || event.target.closest('button, input, select, a')) return;
+  swipe = { id: event.pointerId, x: event.clientX, y: event.clientY, open: drawerOpen };
+});
+document.addEventListener('pointercancel', () => { swipe = null; });
+document.addEventListener('pointerup', event => {
+  if (!swipe || swipe.id !== event.pointerId) return;
+  const dx = event.clientX - swipe.x, dy = event.clientY - swipe.y;
+  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    if (!swipe.open && dx < 0) setDrawer(true);
+    else if (swipe.open && dx > 0) setDrawer(false);
+  }
+  swipe = null;
+});
 const storageKey = 'click-studio-settings-v1';
 let config;
 try { config = sanitize(JSON.parse(localStorage.getItem(storageKey)) ?? DEFAULTS); }
 catch { config = sanitize(DEFAULTS); }
+// A new session starts with automation off; an active Android service restores its state below.
+config.automation.enabled = false;
 let playing = false;
 let started = false;
 let events = [];
-let activeBeat = -1;
+let activeBeat = 0;
+let currentBpm = config.bpm;
+let position = { bar: 1, beat: 0 };
 let startRequest = 0;
 let tapTimer;
-let clearBeatTimer;
+let editingTempo = false;
 const tapTempo = new TapTempo();
 const noteNames = { whole: 'Whole note', half: 'Half note', quarter: 'Quarter note', eighth: 'Eighth note', sixteenth: 'Sixteenth note', triplet: 'Triplet', 'triplet-skip': 'Triplet · 1 & 3', 'sixteenth-skip': '16ths · 1 & 4' };
-const denominatorNames = { 2: 'half', 4: 'quarter', 8: 'eighth', 16: 'sixteenth' };
-const audio = new ClickAudio(event => {
+const AudioEngine = isAndroid ? NativeAudio : ClickAudio;
+const audio = new AudioEngine(event => {
   if (playing) {
     events.push(event);
     if (events.length > 128) events.splice(0, events.length - 128);
@@ -27,40 +94,46 @@ const audio = new ClickAudio(event => {
     audio.send('pause');
     events = [];
     renderTransport();
-    showError('Audio was interrupted. Press Resume to continue.');
+    showError(t('Audio was interrupted. Press Resume to continue.'));
   }
 });
 
-function showError(message) { $('#error').textContent = message; $('#error').hidden = false; }
+function syncNativeState(state) {
+  if (state.config?.bpm) { config = sanitize(state.config); persist(); render(); }
+  currentBpm = state.currentBpm ?? config.bpm;
+  renderAutomation();
+  playing = state.playing === true;
+  if (playing) started = true;
+  else { events = []; }
+  renderTransport();
+  if (state.error || state.message) showError(state.error || state.message);
+}
+if (isAndroid) {
+  window.addEventListener('native-state', event => syncNativeState(event.detail));
+}
+
+function showError(message) { $('#error').textContent = t(message); $('#error').hidden = false; }
 function persist() { try { localStorage.setItem(storageKey, JSON.stringify(config)); } catch { /* Ephemeral sessions can still play. */ } }
 function update(patch) {
-  const rhythmChanged = ['numerator', 'denominator', 'note'].some(key => Object.hasOwn(patch, key) && patch[key] !== config[key]);
+  const rhythmChanged = ['numerator', 'denominator', 'note', 'automation'].some(key => Object.hasOwn(patch, key) && patch[key] !== config[key]);
   config = sanitize({ ...config, ...patch });
-  if (rhythmChanged) { events = []; activeBeat = -1; $('#position').textContent = 'BAR 01 · BEAT 01'; }
+  if (rhythmChanged || (Object.hasOwn(patch, 'bpm') && config.automation.enabled)) { events = []; activeBeat = 0; position = {bar:1,beat:0}; renderPosition(); }
+  if (rhythmChanged || Object.hasOwn(patch, 'bpm')) currentBpm = config.bpm;
   audio.configure(config);
   persist();
   render();
 }
 function render() {
-  $('#bpm').value = config.bpm;
-  $('#tempo-range').value = config.bpm;
-  $('#tempo-name').textContent = config.bpm < 60 ? 'LARGO' : config.bpm < 76 ? 'ADAGIO' : config.bpm < 108 ? 'ANDANTE' : config.bpm < 120 ? 'MODERATO' : config.bpm < 168 ? 'ALLEGRO' : config.bpm < 200 ? 'PRESTO' : 'PRESTISSIMO';
-  $('#decrease').disabled = config.bpm <= 10;
-  $('#increase').disabled = config.bpm >= 300;
-  const signature = `${config.numerator}/${config.denominator}`;
-  if ($('#meter').value !== 'custom') {
-    $('#meter').value = Array.from($('#meter').options).some(option => option.value === signature) ? signature : 'custom';
-  }
-  $('#custom-meter').hidden = $('#meter').value !== 'custom';
   $('#numerator').value = config.numerator;
   $('#denominator').value = config.denominator;
-  $('#division-name').textContent = noteNames[config.note];
+  $('#division-name').textContent = t(noteNames[config.note]);
   document.querySelectorAll('[data-note]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.note === config.note)));
   $('#volume').value = config.volume;
   $('#volume-value').textContent = `${config.volume}%`;
   $('#pan').value = config.pan;
-  $('#pan-value').textContent = config.pan === 0 ? 'Center' : `${Math.abs(config.pan)}% ${config.pan < 0 ? 'left' : 'right'}`;
-  $('#beat-unit').textContent = `1 beat = ${denominatorNames[config.denominator]} note`;
+  $('#pan-value').textContent = config.pan === 0 ? t('Center') : t(config.pan < 0 ? '{pan}% left' : '{pan}% right', {pan:Math.abs(config.pan)});
+  $('#beat-unit').textContent = t('1 beat = {note}', {note:t(({2:'Half note',4:'Quarter note',8:'Eighth note',16:'Sixteenth note'})[config.denominator])});
+  renderAutomation();
   renderBeats();
 }
 function renderBeats() {
@@ -83,19 +156,17 @@ function renderBeats() {
   Array.from(container.children).forEach((button, i) => {
     const pitch = config.accents[i] ? 'high' : 'low';
     button.dataset.high = String(config.accents[i]);
-    button.setAttribute('aria-label', `Beat ${i + 1}: ${pitch} pitch. Click to switch.`);
+    button.setAttribute('aria-label', t('Beat {beat}: {pitch} pitch. Click to switch.',{beat:i+1,pitch:t(config.accents[i] ? 'High' : 'Low')}));
     button.setAttribute('aria-pressed', String(config.accents[i]));
-    button.querySelector('.beat-pitch').textContent = pitch.toUpperCase();
-    button.classList.toggle('active', playing && i === activeBeat);
+    button.querySelector('.beat-pitch').textContent = t(pitch.toUpperCase());
+    button.classList.toggle('active', i === Math.min(activeBeat, config.numerator - 1));
   });
 }
 function renderTransport() {
-  $('#play-label').textContent = playing ? 'Pause metronome' : started ? 'Resume metronome' : 'Start metronome';
+  $('#play-label').textContent = t(playing ? 'Pause metronome' : started ? 'Resume metronome' : 'Start metronome');
   $('#play-icon').textContent = playing ? 'Ⅱ' : '▶';
   $('#play').setAttribute('aria-label', $('#play-label').textContent);
-  $('#status-text').textContent = playing ? 'Keeping you in time' : started ? 'Paused. Take a breath.' : 'Ready when you are';
-  $('#status-led').classList.toggle('running', playing);
-  $('#play-state').textContent = playing ? 'IN THE POCKET' : started ? 'PAUSED' : 'LET’S MAKE SOME TIME';
+  $('#play-state').textContent = playing ? t('IN THE POCKET') : started ? t('PAUSED') : '';
   renderBeats();
 }
 async function togglePlayback() {
@@ -117,9 +188,8 @@ async function togglePlayback() {
     playing = true;
     started = true;
     audio.send('start');
-    drawWaveform(audio.samples.high);
     renderTransport();
-  } catch (error) { showError(`Could not start audio: ${error.message}`); }
+  } catch (error) { showError(t('Could not start audio: {error}',{error:error.message})); }
   finally { $('#play').disabled = false; }
 }
 function reset() {
@@ -127,9 +197,9 @@ function reset() {
   playing = false;
   started = false;
   events = [];
-  activeBeat = -1;
+  activeBeat = 0;
   audio.send('reset');
-  $('#position').textContent = 'BAR 01 · BEAT 01';
+  position = {bar:1,beat:0}; currentBpm = config.bpm; renderPosition(); renderAutomation();
   renderTransport();
 }
 async function preview(high) {
@@ -137,53 +207,51 @@ async function preview(high) {
     await audio.init();
     audio.configure(config);
     audio.send('preview', { high });
-    drawWaveform(audio.samples[high ? 'high' : 'low']);
     $('#error').hidden = true;
-  } catch (error) { showError(`Could not preview click: ${error.message}`); }
+  } catch (error) { showError(t('Could not preview click: {error}',{error:error.message})); }
 }
 function tap() {
   const tempo = tapTempo.tap(performance.now());
   if (tempo !== null) update({ bpm: tempo });
-  $('#tap-hint').textContent = tempo === null ? 'Keep tapping…' : `${tapTempo.times.length} taps · ${tempo} BPM`;
+  $('#tap-hint').textContent = tempo === null ? t('Keep tapping…') : t('{count} taps · {bpm} BPM',{count:tapTempo.times.length,bpm:tempo});
   $('#tap').classList.add('tapped');
   clearTimeout(tapTimer);
   tapTimer = setTimeout(() => $('#tap').classList.remove('tapped'), 100);
 }
 function commitTempo() {
   const input = $('#bpm');
-  if (input.value.trim() === '') { input.value = config.bpm; return; }
+  if (!editingTempo) return;
+  editingTempo = false;
+  if (input.value.trim() === '') { renderCurrentTempo(); return; }
   update({ bpm: input.value });
 }
+$('#bpm').addEventListener('input', () => { editingTempo = true; });
 $('#bpm').addEventListener('change', commitTempo);
+$('#bpm').addEventListener('blur', () => { commitTempo(); renderCurrentTempo(); });
 $('#bpm').addEventListener('keydown', event => { if (event.key === 'Enter') { commitTempo(); event.currentTarget.blur(); } });
 $('#tempo-range').addEventListener('input', event => update({ bpm: event.target.value }));
-$('#decrease').addEventListener('click', event => update({ bpm: config.bpm - (event.shiftKey ? 10 : 1) }));
-$('#increase').addEventListener('click', event => update({ bpm: config.bpm + (event.shiftKey ? 10 : 1) }));
+$('#decrease').addEventListener('click', event => update({ bpm: displayedTempo() - (event.shiftKey ? 10 : 1) }));
+$('#increase').addEventListener('click', event => update({ bpm: displayedTempo() + (event.shiftKey ? 10 : 1) }));
 $('#tap').addEventListener('click', tap);
 $('#play').addEventListener('click', togglePlayback);
 $('#reset').addEventListener('click', reset);
-$('#meter').addEventListener('change', event => {
-  if (event.target.value === 'custom') { $('#custom-meter').hidden = false; return; }
-  const [numerator, denominator] = event.target.value.split('/').map(Number);
-  update({ numerator, denominator });
-});
 $('#numerator').addEventListener('change', event => update({ numerator: event.target.value }));
 $('#denominator').addEventListener('change', event => update({ denominator: Number(event.target.value) }));
 document.querySelectorAll('[data-note]').forEach(button => button.addEventListener('click', () => update({ note: button.dataset.note })));
 $('#volume').addEventListener('input', event => update({ volume: Number(event.target.value) }));
 $('#pan').addEventListener('input', event => update({ pan: Number(event.target.value) }));
 $('#center-pan').addEventListener('click', () => update({ pan: 0 }));
-$('#preview-high').addEventListener('click', () => preview(true));
-$('#preview-low').addEventListener('click', () => preview(false));
 document.addEventListener('keydown', event => {
+  if (drawerOpen || $('#export-dialog').open) return;
   if (event.ctrlKey || event.metaKey || event.altKey || event.target.closest('input, select, textarea, [contenteditable]')) return;
   if (event.repeat) return;
+  if (event.code === 'Space' && event.target.closest('#automation-enabled')) return;
   if (event.code === 'Space') { event.preventDefault(); togglePlayback(); }
   if (event.key.toLowerCase() === 't') { event.preventDefault(); tap(); }
   if (event.key.toLowerCase() === 'r') { event.preventDefault(); reset(); }
   if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
     event.preventDefault();
-    update({ bpm: config.bpm + (event.key === 'ArrowUp' ? 1 : -1) * (event.shiftKey ? 10 : 1) });
+    update({ bpm: displayedTempo() + (event.key === 'ArrowUp' ? 1 : -1) * (event.shiftKey ? 10 : 1) });
   }
 });
 
@@ -193,52 +261,51 @@ function animate() {
     let latestBeat;
     while (events.length && events[0].time <= time) {
       const event = events.shift();
+      if (event.bpm != null && currentBpm !== event.bpm) { currentBpm = event.bpm; renderCurrentTempo(); }
       if (event.beatStart) latestBeat = event;
     }
     if (latestBeat) {
       activeBeat = latestBeat.beat;
-      $('#position').textContent = `BAR ${String(latestBeat.bar).padStart(2, '0')} · BEAT ${String(latestBeat.beat + 1).padStart(2, '0')}`;
+      position = latestBeat; renderPosition();
       renderBeats();
-      clearTimeout(clearBeatTimer);
-      clearBeatTimer = setTimeout(() => { activeBeat = -1; renderBeats(); }, Math.min(160, 60000 / config.bpm * 4 / config.denominator * .7));
     }
   }
   requestAnimationFrame(animate);
 }
-function drawWaveform(sample) {
-  const canvas = $('#waveform');
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.strokeStyle = '#68884e';
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(0, 40); ctx.lineTo(640, 40); ctx.stroke();
-  ctx.strokeStyle = '#b9e38e';
-  ctx.lineWidth = 2;
-  for (let x = 0; x < 640; x += 4) {
-    let amplitude = 0;
-    if (sample) {
-      const begin = Math.floor(x / 640 * sample.length);
-      const end = Math.floor((x + 4) / 640 * sample.length);
-      for (let i = begin; i < end; i++) amplitude = Math.max(amplitude, Math.abs(sample[i]));
-    }
-    ctx.beginPath(); ctx.moveTo(x, 40 - amplitude * 35); ctx.lineTo(x, 40 + amplitude * 35); ctx.stroke();
-  }
+function renderPosition() {
+  $('#position').textContent = t('BAR {bar} · BEAT {beat}', {bar:String(position.bar).padStart(2,'0'),beat:String(position.beat+1).padStart(2,'0')});
 }
-// Draw the actual PCM waveform without opening the audio device on startup.
-fetch('./assets/click-high.wav').then(response => response.arrayBuffer()).then(buffer => {
-  const view = new DataView(buffer);
-  let offset = 12;
-  while (offset + 8 <= buffer.byteLength) {
-    const tag = String.fromCharCode(...new Uint8Array(buffer, offset, 4));
-    const size = view.getUint32(offset + 4, true);
-    if (tag === 'data') {
-      const sample = new Float32Array(size / 2);
-      for (let i = 0; i < sample.length; i++) sample[i] = view.getInt16(offset + 8 + i * 2, true) / 32768;
-      drawWaveform(sample); return;
-    }
-    offset += 8 + size + size % 2;
-  }
-}).catch(() => drawWaveform());
-render();
-renderTransport();
+function renderAutomation() {
+  const a = config.automation;
+  $('#automation-enabled').setAttribute('aria-pressed', String(a.enabled));
+  $('#automation-enabled').textContent = t(a.enabled ? 'Automation: ON' : 'Automation: OFF');
+  $('#automation-direction').value = a.delta < 0 ? '-1' : '1';
+  $('#automation-delta').value = Math.abs(a.delta) || 1;
+  $('#automation-every').value = a.every;
+  $('#automation-unit').value = a.unit;
+  document.querySelectorAll('.automation-fields input, .automation-fields select').forEach(element => element.disabled = !a.enabled);
+  renderCurrentTempo();
+}
+function displayedTempo() { return config.automation.enabled ? currentBpm : config.bpm; }
+function renderCurrentTempo() {
+  const bpm = displayedTempo();
+  if (!editingTempo) $('#bpm').value = bpm;
+  $('#tempo-range').value = bpm;
+  $('#tempo-name').textContent = bpm < 60 ? 'LARGO' : bpm < 76 ? 'ADAGIO' : bpm < 108 ? 'ANDANTE' : bpm < 120 ? 'MODERATO' : bpm < 168 ? 'ALLEGRO' : bpm < 200 ? 'PRESTO' : 'PRESTISSIMO';
+  $('#decrease').disabled = bpm <= 10;
+  $('#increase').disabled = bpm >= 300;
+  const enabled = config.automation.enabled, status = t('Start tempo: {bpm} BPM', {bpm:config.bpm});
+  $('#automation-status').textContent = enabled ? status : t('Automation off');
+  $('#tempo-caption').textContent = t('BEATS PER MINUTE');
+  $('#live-tempo').hidden = !enabled;
+  $('#live-tempo').textContent = status;
+}
+function changeAutomation() {
+  update({automation:{enabled:config.automation.enabled,delta:Number($('#automation-direction').value)*Math.max(1,Number($('#automation-delta').value)),every:Number($('#automation-every').value),unit:$('#automation-unit').value}});
+}
+$('#automation-enabled').addEventListener('click', () => update({ automation: { ...config.automation, enabled: !config.automation.enabled } }));
+for (const id of ['automation-direction','automation-delta','automation-every','automation-unit']) $('#'+id).addEventListener('change',changeAutomation);
+const refreshExport = setupExport(() => config);
+initLanguage(() => { render(); renderTransport(); renderPosition(); $('#tap-hint').textContent = t('Tap at least twice'); refreshExport(); });
 animate();
+if (isAndroid) audio.init().then(() => syncNativeState(audio.snapshot())).catch(error => showError(error.message));

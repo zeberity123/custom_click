@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 export class ClickAudio {
   constructor(onEvent, onState) {
     this.onEvent = onEvent;
@@ -11,7 +12,7 @@ export class ClickAudio {
     });
     await this.loading;
     await this.context.resume();
-    if (this.context.state !== 'running') throw new Error('Audio output is unavailable. Check your output device and try again.');
+    if (this.context.state !== 'running') throw new Error(t('Audio output is unavailable. Check your output device and try again.'));
   }
   async load() {
     this.context = new AudioContext({ latencyHint: 'interactive' });
@@ -21,7 +22,7 @@ export class ClickAudio {
     const samples = {};
     for (const pitch of ['high', 'low']) {
       const response = await fetch(`./assets/click-${pitch}.wav`);
-      if (!response.ok) throw new Error(`Could not load the ${pitch} click sample.`);
+      if (!response.ok) throw new Error(t('Could not load click samples.'));
       const buffer = await this.context.decodeAudioData(await response.arrayBuffer());
       samples[pitch] = buffer.getChannelData(0);
     }

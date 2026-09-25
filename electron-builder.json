@@ -9,7 +9,8 @@
   "win": {
     "target": [{ "target": "portable", "arch": ["x64"] }],
     "artifactName": "Custom-Click-${version}-win-${arch}.exe",
-    "signAndEditExecutable": false
+    "icon": "src/assets/icon.ico",
+    "signExecutable": false
   },
   "portable": { "requestExecutionLevel": "user" }
 }
