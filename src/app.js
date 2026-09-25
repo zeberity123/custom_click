@@ -11,7 +11,14 @@ const isAndroid = typeof window.NativeClick !== 'undefined';
 const isIOS = typeof window.IOSClick !== 'undefined';
 const isNative = isAndroid || isIOS;
 if (isAndroid) document.documentElement.classList.add('android');
-if (isIOS) document.documentElement.classList.add('ios');
+if (isIOS) {
+  document.documentElement.classList.add('ios');
+  // Apple fonts do not consistently include the whole/half-note music code points.
+  for (const note of ['whole','half']) {
+    const symbol = document.querySelector(`[data-note="${note}"] > span`);
+    symbol.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="10" cy="${note === 'whole' ? 13 : 18}" rx="5" ry="3" transform="rotate(-20 10 ${note === 'whole' ? 13 : 18})" fill="none" stroke="currentColor" stroke-width="1.8"/>${note === 'half' ? '<path d="M15 17V3" fill="none" stroke="currentColor" stroke-width="1.8"/>' : ''}</svg>`;
+  }
+}
 
 const $ = selector => document.querySelector(selector);
 const mobileQuery = matchMedia('(max-width: 650px)');
@@ -179,7 +186,7 @@ function renderBeats() {
 }
 function renderTransport() {
   $('#play-label').textContent = t(playing ? 'Pause' : started ? 'Resume' : 'Start');
-  $('#play-icon').textContent = playing ? 'Ⅱ' : '▶';
+  $('#play-icon').textContent = playing ? 'Ⅱ' : isIOS ? '▶︎' : '▶';
   $('#play').setAttribute('aria-label', $('#play-label').textContent);
   $('#play-state').textContent = playing ? t('IN THE POCKET') : started ? t('PAUSED') : '';
   renderBeats();

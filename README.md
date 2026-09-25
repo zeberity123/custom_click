@@ -6,6 +6,8 @@ For another Windows PC, build the portable executable with `npm run package:port
 
 ## In-app updates
 
+An experimental iPad/iPhone port is available on the `ios-port` branch. See [the iOS build and Windows sideloading guide](ios/README.md). Its unsigned IPA targets iOS/iPadOS 18 and newer and requires signing through a sideloading tool before installation.
+
 Starting with 0.5.0, **Update** sits immediately to the left of **Export MP3**. Click it to check the latest published stable release on GitHub, then choose **Download update** and **Install update**. Network access occurs only when you request an update check or download. Metronome playback and MP3 export still work offline. Install 0.5.2 or newer manually once to add this button to older versions.
 
 On Windows, the portable app closes, replaces its original EXE, and restarts from the same location, keeping shortcuts and saved settings. The previous EXE is retained with a `.previous` suffix. If the folder is not writable or the file is locked, the app restores the old executable and shows the location of the verified download. Development/unpacked builds launch the downloaded portable app instead of replacing their runtime.

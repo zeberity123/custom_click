@@ -24,10 +24,12 @@ try {
     }};
   });
   await page.evaluate(()=>localStorage.clear());await page.reload();
-  for(const size of [{width:834,height:1194},{width:1194,height:834},{width:390,height:760},{width:320,height:568}]) {
+  for(const size of [{width:834,height:1150},{width:1194,height:786},{width:390,height:760},{width:320,height:568}]) {
     await page.setViewportSize(size);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
     for(const id of ['#bpm','#play','#reset'])assert.equal(await page.locator(id).isVisible(),true);
+    const playBox=await page.locator('#play').boundingBox();
+    assert.ok(playBox.y+playBox.height<=size.height,`Play below viewport at ${size.width}x${size.height}: ${JSON.stringify(playBox)}`);
     assert.equal(await page.locator('.keyboard-shortcuts').isVisible(),false);
     assert.ok(await page.locator('#bpm').evaluate(node=>parseFloat(getComputedStyle(node).fontSize)>=60));
     await page.screenshot({path:`artifacts/ios-${size.width}.png`,fullPage:true});
