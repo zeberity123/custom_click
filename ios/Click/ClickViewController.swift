@@ -104,7 +104,10 @@ final class ClickViewController: UIViewController, WKNavigationDelegate, WKScrip
         lastAudioUse = Date()
         UIApplication.shared.isIdleTimerDisabled = playing
         MPNowPlayingInfoCenter.default().nowPlayingInfo = playing ? [MPMediaItemPropertyTitle: "Click — Metronome", MPNowPlayingInfoPropertyPlaybackRate: 1.0, MPNowPlayingInfoPropertyIsLiveStream: true] : nil
-        emit("native-state", state())
+        var status = state()
+        // The audio thread applies queued commands on its next render buffer.
+        if command == "reset" { status["currentBpm"] = config["bpm"] ?? 126 }
+        emit("native-state", status)
     }
     private func remoteCommand(_ value: String) {
         DispatchQueue.main.async { [weak self] in
