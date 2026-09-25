@@ -95,7 +95,7 @@ public final class MetronomeService extends Service {
             for (int i=0;i<accents.length;i++) accents[i] = input.optBoolean(i,true);
             JSONObject automation = value.optJSONObject("automation");
             if (automation == null) automation = new JSONObject();
-            engine.configure(new RhythmEngine.Config(value.optInt("bpm",176), value.optInt("numerator",4), value.optInt("denominator",4), value.optString("note","eighth"), (float)value.optDouble("volume",65), (float)value.optDouble("pan",0), accents, automation.optBoolean("enabled",false), automation.optInt("delta",5), automation.optInt("every",4), automation.optString("unit","bars")));
+            engine.configure(new RhythmEngine.Config(value.optInt("bpm",RhythmEngine.DEFAULT_BPM), value.optInt("numerator",4), value.optInt("denominator",4), value.optString("note","eighth"), (float)value.optDouble("volume",65), (float)value.optDouble("pan",0), accents, automation.optBoolean("enabled",false), automation.optInt("delta",5), automation.optInt("every",4), automation.optString("unit","bars")));
             getSharedPreferences("audio",0).edit().putString("config", configJson().toString()).apply();
             main.post(() -> { if (foreground) getSystemService(NotificationManager.class).notify(NOTIFICATION, notification()); });
         } catch (JSONException failure) { error = "Invalid metronome settings."; }
@@ -114,7 +114,7 @@ public final class MetronomeService extends Service {
     }
     public JSONObject snapshot() {
         JSONObject json = new JSONObject();
-        try { json.put("playing",engine != null && engine.isRunning()).put("config",configJson()).put("currentBpm",engine == null ? 176 : engine.currentBpm()).put("error",error); } catch(JSONException ignored) { }
+        try { json.put("playing",engine != null && engine.isRunning()).put("config",configJson()).put("currentBpm",engine == null ? RhythmEngine.DEFAULT_BPM : engine.currentBpm()).put("error",error); } catch(JSONException ignored) { }
         return json;
     }
     private void emitState(String message) {
@@ -151,7 +151,7 @@ public final class MetronomeService extends Service {
     private Notification notification() {
         PendingIntent open = PendingIntent.getActivity(this,0,new Intent(this,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         PendingIntent pause = PendingIntent.getService(this,1,new Intent(this,MetronomeService.class).setAction(PAUSE),PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        int bpm = engine == null ? 176 : engine.currentBpm();
+        int bpm = engine == null ? RhythmEngine.DEFAULT_BPM : engine.currentBpm();
         return new Notification.Builder(this,CHANNEL).setSmallIcon(R.drawable.ic_notification).setColor(0xff39c5bb).setContentTitle("Click · " + bpm + " BPM").setContentText(text("Metronome is playing","메트로놈 재생 중","メトロノーム再生中")).setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true)
             .addAction(new Notification.Action.Builder(android.R.drawable.ic_media_pause,text("Pause","일시정지","一時停止"),pause).build())
             .setStyle(new Notification.MediaStyle().setMediaSession(session.getSessionToken()).setShowActionsInCompactView(0)).build();

@@ -8,7 +8,7 @@ try {
   const page = await app.firstWindow();
   const errors=[]; page.on('pageerror',error=>errors.push(error.message));
   await page.addInitScript(() => {
-    let config = { bpm:176,numerator:4,denominator:4,note:'eighth',volume:65,pan:0,accents:[true,true,true,true] };
+    let config = { bpm:126,numerator:4,denominator:4,note:'eighth',volume:65,pan:0,accents:[true,true,true,true] };
     let playing=false;
     let exportBytes=0;
     window.nativeCalls=[];
@@ -22,6 +22,7 @@ try {
   await page.setViewportSize({width:390,height:760});await page.reload();
   await page.waitForFunction(()=>document.documentElement.classList.contains('android'));
   assert.equal(await page.locator('#language').inputValue(),'en');
+  assert.equal(await page.locator('#bpm').inputValue(),'126');
   assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()),'#39c5bb');
   for (const viewport of [{width:320,height:568},{width:360,height:640},{width:390,height:760},{width:844,height:320}]) {
     await page.setViewportSize(viewport);
@@ -50,11 +51,11 @@ try {
   await page.locator('#close-settings').click();
   await page.locator('#settings-drawer').waitFor({state:'hidden'});
   await page.locator('#play').click();
-  await page.getByRole('button',{name:'Pause metronome'}).waitFor();
+  await page.getByRole('button',{name:'Pause'}).waitFor();
   await page.evaluate(()=>window.dispatchEvent(new CustomEvent('native-click',{detail:{time:0,beat:2,bar:3,beatStart:true,click:true,high:true}})));
   await page.waitForFunction(()=>document.querySelector('#position').textContent.includes('BAR 03'));
   await page.evaluate(()=>window.dispatchEvent(new CustomEvent('native-state',{detail:{playing:false,message:'Audio focus lost.'}})));
-  await page.getByRole('button',{name:'Resume metronome'}).waitFor();
+  await page.getByRole('button',{name:'Resume'}).waitFor();
   await page.locator('.beat-button').first().click();
   assert.ok(await page.evaluate(()=>window.nativeCalls.some(call=>call.type==='preview' && !call.high)));
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
@@ -100,7 +101,7 @@ try {
   await page.locator('#save-export').click();
   await page.waitForFunction(()=>document.querySelector('#export-status').textContent==='MP3 saved.');
   const exported=await page.evaluate(()=>window.nativeCalls.find(call=>call.type==='export'));
-  assert.equal(exported.filename,'Click-176bpm.mp3');
+  assert.equal(exported.filename,'Click-126bpm.mp3');
   assert.ok(exported.bytes>20000);
   await page.locator('#close-export').click();
   assert.deepEqual(errors,[]);

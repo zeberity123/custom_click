@@ -163,7 +163,7 @@ function renderBeats() {
   });
 }
 function renderTransport() {
-  $('#play-label').textContent = t(playing ? 'Pause metronome' : started ? 'Resume metronome' : 'Start metronome');
+  $('#play-label').textContent = t(playing ? 'Pause' : started ? 'Resume' : 'Start');
   $('#play-icon').textContent = playing ? 'Ⅱ' : '▶';
   $('#play').setAttribute('aria-label', $('#play-label').textContent);
   $('#play-state').textContent = playing ? t('IN THE POCKET') : started ? t('PAUSED') : '';

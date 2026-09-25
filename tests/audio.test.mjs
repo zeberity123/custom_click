@@ -77,9 +77,10 @@ test('rendered patterns sound only the requested slots, including at tempo limit
 });
 test('changing to a sparse pattern during playback restarts at the first hit', () => {
   const processor = new Processor();
+  send(processor, { type: 'config', config: sanitize({ bpm: 176 }) });
   send(processor, { type: 'start' });
   render(processor, .2);
-  send(processor, { type: 'config', config: sanitize({ note: 'triplet-skip' }) });
+  send(processor, { type: 'config', config: sanitize({ bpm: 176, note: 'triplet-skip' }) });
   assert.equal(processor.tick, 0);
   assert.equal(processor.remaining, 0);
   processor.events.length = 0;
@@ -91,6 +92,7 @@ test('changing to a sparse pattern during playback restarts at the first hit', (
 });
 test('meter changes restart the bar and tempo changes keep the fractional phase', () => {
   const processor = new Processor();
+  send(processor, { type: 'config', config: sanitize({ bpm: 176 }) });
   send(processor, { type: 'start' });
   render(processor, .1);
   const remaining = processor.remaining;

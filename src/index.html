@@ -24,20 +24,20 @@
           <div class="panel-top"><span class="section-label">TEMPO</span><span id="tempo-name" class="tempo-name">ALLEGRO</span></div>
           <div class="tempo-control">
             <button class="step-button" id="decrease" aria-label="Decrease tempo">−</button>
-            <div class="tempo-number"><input id="bpm" type="number" min="10" max="300" step="1" value="176" aria-label="Tempo in beats per minute"><span id="tempo-caption">BEATS PER MINUTE</span><span id="live-tempo" hidden></span></div>
+            <div class="tempo-number"><input id="bpm" type="number" min="10" max="300" step="1" value="126" aria-label="Tempo in beats per minute"><span id="tempo-caption">BEATS PER MINUTE</span><span id="live-tempo" hidden></span></div>
             <button class="step-button" id="increase" aria-label="Increase tempo">+</button>
           </div>
-          <div class="tempo-slider"><input id="tempo-range" type="range" min="10" max="300" value="176" aria-label="Tempo"><div class="range-endpoints"><span>10 BPM</span><span>300 BPM</span></div></div>
+          <div class="tempo-slider"><input id="tempo-range" type="range" min="10" max="300" value="126" aria-label="Tempo"><div class="range-endpoints"><span>10 BPM</span><span>300 BPM</span></div></div>
           <div class="tap-row"><span>Or feel it out</span><button id="tap" class="tap-button">Tap tempo <kbd>T</kbd></button><span id="tap-hint">Tap at least twice</span></div>
           <div class="keyboard-shortcuts"><span><kbd>SPACE</kbd> play / pause <span class="footer-divider">/</span> <kbd>T</kbd> tap <span class="footer-divider">/</span> <kbd>↑</kbd> <kbd>↓</kbd> tempo</span></div>
           <div class="beat-section"><div class="beat-heading"><span class="section-label">BEAT PATTERN</span><span>Click a beat to switch pitch</span></div><div id="beats" class="beats" aria-label="Beat pitch controls"></div><div class="beat-legend"><span><i class="high-key"></i> High</span><span><i class="low-key"></i> Low</span><span class="beat-unit" id="beat-unit">1 beat = quarter note</span></div></div>
-          <div class="transport"><button id="reset" class="reset-button" aria-label="Reset to first beat" title="Reset to first beat (R)">↺</button><button id="play" class="play-button"><span id="play-icon" aria-hidden="true">▶</span><span id="play-label">Start metronome</span><kbd>SPACE</kbd></button></div>
+          <div class="transport"><button id="reset" class="reset-button" aria-label="Reset to first beat" title="Reset to first beat (R)">↺</button><button id="play" class="play-button"><span id="play-icon" aria-hidden="true">▶</span><span id="play-label">Start</span><kbd>SPACE</kbd></button></div>
           <div class="transport-caption"><span id="position">BAR 01 <span>·</span> BEAT 01</span><span id="play-state"></span></div>
         </section>
         <div id="drawer-backdrop" class="drawer-backdrop" hidden></div>
         <aside id="settings-drawer" class="settings-column" aria-label="Rhythm and sound" tabindex="-1">
           <div class="drawer-heading"><h2>Rhythm &amp; sound</h2><button id="close-settings" aria-label="Close rhythm and sound">×</button></div>
-          <section class="panel rhythm-panel"><div class="panel-top"><span class="section-label">RHYTHM</span><span class="panel-icon" aria-hidden="true">♬</span></div>
+          <section class="panel rhythm-panel"><div class="panel-top"><span class="section-label">Time Signature</span><span class="panel-icon" aria-hidden="true">♬</span></div>
             <div id="custom-meter" class="custom-meter"><label>Beats <input id="numerator" type="number" min="1" max="12" value="4"></label><span>/</span><label>Notes <select id="denominator"><option>2</option><option selected>4</option><option>8</option><option>16</option></select></label></div>
             <div class="field-label subdivision-label">Click division <span id="division-name">Eighth note</span></div>
             <div class="note-options" role="group" aria-label="Click division"><button data-note="whole" aria-label="Whole note" aria-pressed="false"><span>𝅝</span><small>1</small></button><button data-note="half" aria-label="Half note" aria-pressed="false"><span>𝅗𝅥</span><small>1/2</small></button><button data-note="quarter" aria-label="Quarter note" aria-pressed="false"><span>♩</span><small>1/4</small></button><button data-note="eighth" aria-label="Eighth note" aria-pressed="true"><span>♪</span><small>1/8</small></button><button data-note="sixteenth" aria-label="Sixteenth note" aria-pressed="false"><span>♬</span><small>1/16</small></button></div>

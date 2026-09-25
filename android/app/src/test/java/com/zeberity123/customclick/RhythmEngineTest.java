@@ -7,6 +7,10 @@ import java.util.List;
 public class RhythmEngineTest {
     private static void check(boolean value, String message) { if(!value) throw new AssertionError(message); }
     public static void main(String[] args) {
+        RhythmEngine fresh = new RhythmEngine(new float[]{1}, new float[]{.5f}, (frame,beat,bar,start,click,high)->{});
+        check(fresh.config().bpm == 126 && fresh.currentBpm() == 126, "factory tempo must be 126 BPM");
+        fresh.configure(new RhythmEngine.Config(176,4,4,"eighth",65,0,new boolean[]{true,true,true,true}));
+        check(fresh.config().bpm == 176 && fresh.currentBpm() == 176, "saved tempo must override the factory default");
         String[] notes = {"whole","half","quarter","eighth","sixteenth","triplet","triplet-skip","sixteenth-skip"};
         for (int bpm : new int[]{10,176,300}) {
             for (String note : notes) {

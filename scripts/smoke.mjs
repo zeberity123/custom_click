@@ -20,13 +20,21 @@ try {
   await page.waitForSelector('#beats .beat-button');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
+  assert.equal(await page.locator('#bpm').inputValue(), '126');
+  assert.equal(await page.locator('.rhythm-panel .section-label').textContent(), 'Time Signature');
+  assert.equal(await page.locator('#play-label').textContent(), 'Start');
+  // Existing saved tempos, including the previous factory value, survive an upgrade/reload.
+  await page.locator('#bpm').fill('176');
+  await page.locator('#bpm').press('Enter');
+  await page.reload();
+  assert.equal(await page.locator('#bpm').inputValue(), '176');
   assert.equal(await page.locator('.beat-button').count(), 4);
   assert.equal(await page.locator('#meter').count(), 0);
   assert.equal(await page.locator('#custom-meter').isVisible(), true);
   assert.equal(await page.locator('.beat-button.active').count(), 1);
   await page.screenshot({ path: 'artifacts/desktop.png' });
   await page.locator('#play').click();
-  await page.getByRole('button', { name: 'Pause metronome' }).waitFor();
+  await page.getByRole('button', { name: 'Pause' }).waitFor();
   const beatContinuity = await page.evaluate(() => new Promise(resolve => {
     const deadline = performance.now() + 900, beats = new Set();
     let gaps = 0;
@@ -44,10 +52,10 @@ try {
   await page.waitForFunction(() => document.querySelector('#position').textContent.includes('BAR 02'));
   assert.equal(await page.locator('#error').isHidden(), true);
   await page.locator('#play').click();
-  assert.equal(await page.locator('#play-label').textContent(), 'Resume metronome');
+  assert.equal(await page.locator('#play-label').textContent(), 'Resume');
   assert.equal(await page.locator('.beat-button.active').count(), 1);
   await page.locator('#reset').click();
-  assert.equal(await page.locator('#play-label').textContent(), 'Start metronome');
+  assert.equal(await page.locator('#play-label').textContent(), 'Start');
   assert.equal(await page.locator('.beat-button.active .beat-orb').textContent(), '1');
   assert.equal(await page.locator('#dotted').count(), 0);
   for (const note of ['triplet', 'triplet-skip', 'sixteenth-skip']) {
@@ -57,7 +65,7 @@ try {
     await page.reload();
     assert.equal(await page.locator(`[data-note="${note}"]`).getAttribute('aria-pressed'), 'true');
     await page.locator('#play').click();
-    await page.getByRole('button', { name: 'Pause metronome' }).waitFor();
+    await page.getByRole('button', { name: 'Pause' }).waitFor();
     await page.waitForFunction(() => document.querySelector('#position').textContent.includes('BAR 02'));
     assert.equal(await page.locator('#error').isHidden(), true);
     await page.locator('#reset').click();
@@ -97,7 +105,7 @@ try {
   await page.locator('#bpm').press('Enter');
   await page.locator('.metronome .section-label').first().click();
   await page.keyboard.press('Space');
-  await page.getByRole('button', { name: 'Pause metronome' }).waitFor();
+  await page.getByRole('button', { name: 'Pause' }).waitFor();
   await page.keyboard.press('Space');
   await page.keyboard.press('r');
   await page.locator('#tap').click();

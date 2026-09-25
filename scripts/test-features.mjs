@@ -16,7 +16,7 @@ try {
   assert.equal(await page.locator('.header-caption,.footer-dot,#platform-label').count(),0);
   assert.equal(await page.locator('#automation-enabled').textContent(),'Automation: OFF');
   assert.equal(await page.locator('#automation-delta').isDisabled(),true);
-  for (const [language,start,save] of [['ko','메트로놈 시작','MP3 저장'],['ja','メトロノーム開始','MP3 を保存'],['en','Start metronome','Save MP3']]) {
+  for (const [language,start,save] of [['ko','시작','MP3 저장'],['ja','開始','MP3 を保存'],['en','Start','Save MP3']]) {
     await page.locator('#language').selectOption(language);
     assert.equal(await page.locator('html').getAttribute('lang'),language);
     assert.equal(await page.locator('#play-label').textContent(),start);
@@ -32,7 +32,7 @@ try {
   assert.equal(await page.locator('#automation-enabled').getAttribute('aria-pressed'),'true');
   await page.locator('#automation-enabled').press('Space');
   assert.equal(await page.locator('#automation-enabled').getAttribute('aria-pressed'),'false');
-  assert.equal(await page.locator('#play-label').textContent(),'Start metronome');
+  assert.equal(await page.locator('#play-label').textContent(),'Start');
   await page.locator('#automation-enabled').press('Enter');
   assert.equal(await page.locator('#automation-enabled').getAttribute('aria-pressed'),'true');
   await page.locator('#automation-delta').fill('60'); await page.locator('#automation-delta').press('Tab');
@@ -55,7 +55,7 @@ try {
   const paused=await page.locator('#bpm').inputValue();
   await page.waitForTimeout(1100); assert.equal(await page.locator('#bpm').inputValue(),paused);
   await page.locator('#language').selectOption('ko');
-  assert.equal(await page.locator('#play-label').textContent(),'메트로놈 재생');
+  assert.equal(await page.locator('#play-label').textContent(),'재생');
   assert.equal(await page.locator('#live-tempo').textContent(),'시작 템포: 120 BPM');
   await page.locator('#language').selectOption('en');
   await page.locator('#increase').click();

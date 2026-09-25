@@ -6,6 +6,7 @@ import java.util.ArrayList;
 public final class RhythmEngine {
     public static final int RATE = 48000;
     public static final int PPQ = 48;
+    public static final int DEFAULT_BPM = 126;
     public interface Listener { void event(long frame, int beat, long bar, boolean beatStart, boolean click, boolean high); }
     public static final class Config {
         public final int bpm, numerator, denominator;
@@ -38,13 +39,13 @@ public final class RhythmEngine {
         int index;
         Voice(float[] sample) { this.sample = sample; }
     }
-    private Config config = new Config(176, 4, 4, "eighth", 65, 0, new boolean[]{true,true,true,true});
+    private Config config = new Config(DEFAULT_BPM, 4, 4, "eighth", 65, 0, new boolean[]{true,true,true,true});
     private final float[] high, low;
     private final ArrayList<Voice> voices = new ArrayList<>();
     private final Listener listener;
     private boolean running;
     private long tick, frames, elapsed, steps;
-    private int currentBpm = 176;
+    private int currentBpm = DEFAULT_BPM;
     private double remaining;
     private float gain = .65f * .65f, pan;
     public RhythmEngine(float[] high, float[] low, Listener listener) { this.high = high; this.low = low; this.listener = listener; }
