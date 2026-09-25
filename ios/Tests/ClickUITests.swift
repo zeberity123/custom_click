@@ -23,7 +23,8 @@ final class ClickUITests: XCTestCase {
         app.buttons["Export MP3"].firstMatch.tap()
         app.buttons["Save MP3"].firstMatch.tap()
         XCTAssertTrue(app.navigationBars.firstMatch.waitForExistence(timeout: 60),app.debugDescription)
-        app.buttons["Cancel"].firstMatch.tap()
+        // The web dialog remains behind the native Files picker on iPad.
+        app.navigationBars.buttons["Cancel"].firstMatch.tap()
         XCTAssertTrue(app.navigationBars.firstMatch.waitForNonExistence(timeout: 10))
         app.buttons["Close export"].firstMatch.tap()
         XCTAssertTrue(app.buttons["Save MP3"].firstMatch.waitForNonExistence(timeout: 10),app.debugDescription)

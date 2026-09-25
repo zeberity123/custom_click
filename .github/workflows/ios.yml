@@ -23,9 +23,12 @@ jobs:
           for kind in ['iPad','iPhone']:
             device=next(d for d in available if kind in d['name'])
             print('Testing',kind,device['name'],flush=True)
+            subprocess.run(['xcrun','simctl','boot',device['udid']])
+            subprocess.run(['xcrun','simctl','bootstatus',device['udid'],'-b'],check=True)
             result=subprocess.run(['xcodebuild','-project','ios/Click.xcodeproj','-scheme','Click','-configuration','Debug','-parallel-testing-enabled','NO','-destination','platform=iOS Simulator,id='+device['udid'],'-derivedDataPath','ios/build/simulator','-resultBundlePath','ios/build/'+kind+'.xcresult','CODE_SIGNING_ALLOWED=NO','test'],stdout=open('ios/build/'+kind+'-test.log','w'),stderr=subprocess.STDOUT)
             subprocess.run(['xcrun','xcresulttool','export','attachments','--path','ios/build/'+kind+'.xcresult','--output-path','ios/build/screenshots/'+kind])
             subprocess.run(['xcrun','xcresulttool','get','test-results','summary','--path','ios/build/'+kind+'.xcresult'])
+            subprocess.run(['xcrun','simctl','shutdown',device['udid']])
             if result.returncode:
               print(open('ios/build/'+kind+'-test.log').read()[-18000:]);raise SystemExit(result.returncode)
           PY
