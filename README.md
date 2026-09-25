@@ -72,7 +72,7 @@ Within each quarter note, the triplet plays at 0, 1/3, and 2/3; the sparse tripl
 
 ## Reference sound
 
-The files `src/assets/click-high.wav` and `click-low.wav` are 120 ms mono samples copied directly from the first two clicks in `1_シルブプレジデント_176.wav`, supplied in the Media folder. The source is 48 kHz, 16-bit PCM with identical left/right channels. Neither waveform is synthesized, normalized, pitch-shifted, or faded. The high/low timbres are approximately 1,000/500 Hz. Their quiet tails are included in full.
+The files `src/assets/click-high.wav` and `click-low.wav` are 120 ms mono samples copied directly from the supplied reference recording. The source is 48 kHz, 16-bit PCM with identical left/right channels. Neither waveform is synthesized, normalized, pitch-shifted, or faded. The high/low timbres are approximately 1,000/500 Hz. Their quiet tails are included in full.
 
 The factory default is 126 BPM in 4/4 with eighth-note clicks. Later launches restore your saved tempo. The pattern uses high on each quarter and low between them, matching the reference rhythm. Source frame offsets and PCM hashes are in `src/assets/provenance.json`. The engine applies a master volume and headroom gain; equal-power center panning and your output device can also change playback loudness. The timbre is taken directly from the supplied audio, but listening confirmation on your hardware remains useful.
 
