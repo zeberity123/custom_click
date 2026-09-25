@@ -344,4 +344,7 @@ const refreshUpdates = setupUpdates(async () => { if (playing) await togglePlayb
 setupAndroidBack(() => drawerOpen, () => setDrawer(false));
 initLanguage(() => { render(); renderTransport(); renderPosition(); $('#tap-hint').textContent = t('Tap at least twice'); refreshExport(); refreshUpdates(); });
 animate();
-if (isNative) audio.init().then(() => syncNativeState(audio.snapshot())).catch(error => showError(error.message));
+// The HTML can appear before modules and the native engine finish loading.
+// Keep Start unavailable until its handlers and initial native state are ready.
+if (isNative) audio.init().then(() => syncNativeState(audio.snapshot())).catch(error => showError(error.message)).finally(() => { $('#play').disabled = false; });
+else $('#play').disabled = false;

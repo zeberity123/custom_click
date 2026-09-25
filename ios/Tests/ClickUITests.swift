@@ -2,9 +2,12 @@ import XCTest
 
 final class ClickUITests: XCTestCase {
     func testPlaybackAndDialogs() throws {
+        continueAfterFailure = false
         let app = XCUIApplication();app.launch()
         let start = app.buttons["Start"].firstMatch
         XCTAssertTrue(start.waitForExistence(timeout: 30),app.debugDescription)
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true AND hittable == true"), object: start)
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 30), .completed)
         start.tap()
         let pause = app.buttons["Pause"].firstMatch
         XCTAssertTrue(pause.waitForExistence(timeout: 10),app.debugDescription)
