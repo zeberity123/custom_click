@@ -5,9 +5,13 @@ import { t, initLanguage } from './i18n.js';
 import { setupExport } from './export-ui.js';
 import { setupUpdates } from './update-ui.js';
 import { setupAndroidBack } from './android-back.js';
+import { IOSAudio } from './ios-audio.js';
 
 const isAndroid = typeof window.NativeClick !== 'undefined';
+const isIOS = typeof window.IOSClick !== 'undefined';
+const isNative = isAndroid || isIOS;
 if (isAndroid) document.documentElement.classList.add('android');
+if (isIOS) document.documentElement.classList.add('ios');
 
 const $ = selector => document.querySelector(selector);
 const mobileQuery = matchMedia('(max-width: 650px)');
@@ -89,7 +93,7 @@ let tapTimer;
 let editingTempo = false;
 const tapTempo = new TapTempo();
 const noteNames = { whole: 'Whole note', half: 'Half note', quarter: 'Quarter note', eighth: 'Eighth note', sixteenth: 'Sixteenth note', triplet: 'Triplet', 'triplet-skip': 'Triplet · 1 & 3', 'sixteenth-skip': '16ths · 1 & 4' };
-const AudioEngine = isAndroid ? NativeAudio : ClickAudio;
+const AudioEngine = isAndroid ? NativeAudio : isIOS ? IOSAudio : ClickAudio;
 const audio = new AudioEngine(event => {
   if (playing) {
     events.push(event);
@@ -115,12 +119,15 @@ function syncNativeState(state) {
   renderTransport();
   if (state.error || state.message) showError(state.error || state.message);
 }
-if (isAndroid) {
+if (isNative) {
   window.addEventListener('native-state', event => syncNativeState(event.detail));
 }
 
 function showError(message) { $('#error').textContent = t(message); $('#error').hidden = false; }
-function persist() { try { localStorage.setItem(storageKey, JSON.stringify(config)); } catch { /* Ephemeral sessions can still play. */ } }
+function persist() {
+  try { localStorage.setItem(storageKey, JSON.stringify(config)); } catch { /* Ephemeral sessions can still play. */ }
+  if (isIOS) void window.IOSClick.call('saveSettings', { settings: config }).catch(() => {});
+}
 function update(patch) {
   const rhythmChanged = ['numerator', 'denominator', 'note', 'automation'].some(key => Object.hasOwn(patch, key) && patch[key] !== config[key]);
   config = sanitize({ ...config, ...patch });
@@ -330,4 +337,4 @@ const refreshUpdates = setupUpdates(async () => { if (playing) await togglePlayb
 setupAndroidBack(() => drawerOpen, () => setDrawer(false));
 initLanguage(() => { render(); renderTransport(); renderPosition(); $('#tap-hint').textContent = t('Tap at least twice'); refreshExport(); refreshUpdates(); });
 animate();
-if (isAndroid) audio.init().then(() => syncNativeState(audio.snapshot())).catch(error => showError(error.message));
+if (isNative) audio.init().then(() => syncNativeState(audio.snapshot())).catch(error => showError(error.message));

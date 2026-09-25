@@ -13,3 +13,8 @@ android/local.properties
 android/**/build/
 *.keystore
 *.jks
+ios/web/
+ios/Click.xcodeproj/
+ios/build/
+*.p12
+*.mobileprovision

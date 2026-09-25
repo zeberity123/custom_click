@@ -1,4 +1,6 @@
 const phrases = [
+  ['Install iPad and iPhone updates using the same app you used to sideload Click.','Click을 설치한 사이드로딩 앱으로 iPad 및 iPhone 업데이트를 설치하세요.','Clickをインストールしたサイドロード用アプリでiPadとiPhoneを更新してください。'],
+  ['Open GitHub releases','GitHub 릴리스 열기','GitHubリリースを開く'],
   ['Update','업데이트','更新'], ['Update Click','Click 업데이트','Click を更新'], ['Close update','업데이트 닫기','更新を閉じる'],
   ['Check again','다시 확인','再確認'], ['Download update','업데이트 다운로드','更新をダウンロード'], ['Install update','업데이트 설치','更新をインストール'],
   ['Installed version: {version}','설치된 버전: {version}','インストール済み：{version}'],
@@ -77,6 +79,7 @@ export function initLanguage(onChange) {
   function apply() {
     document.documentElement.lang = language; select.value = language;
     window.NativeClick?.setLanguage?.(language);
+    if (window.IOSClick) void window.IOSClick.call('language', { language }).catch(() => {});
     for (const {node,key,prefix,suffix} of staticText) node.textContent = prefix + t(key) + suffix;
     for (const {node,attr,key} of staticAttributes) node.setAttribute(attr,t(key));
     document.title = `Click — ${t('Metronome')}`;
