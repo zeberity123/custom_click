@@ -27,11 +27,11 @@ public final class RhythmEngine {
             this.bpm = Math.max(10, Math.min(300, bpm));
             this.numerator = Math.max(1, Math.min(12, numerator));
             this.denominator = denominator == 2 || denominator == 8 || denominator == 16 ? denominator : 4;
-            this.note = switch(note) { case "whole", "half", "quarter", "eighth", "sixteenth", "triplet", "triplet-skip", "sixteenth-skip" -> note; default -> "eighth"; };
+            this.note = switch(note) { case "whole", "half", "quarter", "eighth", "sixteenth", "triplet", "triplet-skip", "sixteenth-skip" -> note; default -> "quarter"; };
             this.volume = Float.isFinite(volume) ? Math.max(0, Math.min(100, volume)) : 65;
             this.pan = Float.isFinite(pan) ? Math.max(-100, Math.min(100, pan)) : 0;
             this.accents = new boolean[this.numerator];
-            for (int i = 0; i < this.numerator; i++) this.accents[i] = i >= accents.length || accents[i];
+            for (int i = 0; i < this.numerator; i++) this.accents[i] = i < accents.length ? accents[i] : i == 0;
         }
     }
     private static final class Voice {
@@ -39,7 +39,7 @@ public final class RhythmEngine {
         int index;
         Voice(float[] sample) { this.sample = sample; }
     }
-    private Config config = new Config(DEFAULT_BPM, 4, 4, "eighth", 65, 0, new boolean[]{true,true,true,true});
+    private Config config = new Config(DEFAULT_BPM, 4, 4, "quarter", 65, 0, new boolean[]{true,false,false,false});
     private final float[] high, low;
     private final ArrayList<Voice> voices = new ArrayList<>();
     private final Listener listener;

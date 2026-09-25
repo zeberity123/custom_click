@@ -44,9 +44,9 @@
     c.numerator=std::clamp([json[@"numerator"] intValue],1,12);
     int d=[json[@"denominator"] intValue];c.denominator=(d==2||d==8||d==16)?d:4;
     NSArray *notes=@[@"whole",@"half",@"quarter",@"eighth",@"sixteenth",@"triplet",@"triplet-skip",@"sixteenth-skip"];
-    NSUInteger note=[notes indexOfObject:json[@"note"]?:@"eighth"];c.note=note==NSNotFound?3:(int)note;
+    NSUInteger note=[notes indexOfObject:json[@"note"]?:@"quarter"];c.note=note==NSNotFound?2:(int)note;
     c.volume=std::clamp([json[@"volume"] floatValue],0.f,100.f);c.pan=std::clamp([json[@"pan"] floatValue],-100.f,100.f);
-    NSArray *accents=json[@"accents"];for(int i=0;i<c.numerator;i++) c.accents[i]=i>=accents.count || [accents[i] boolValue];
+    NSArray *accents=json[@"accents"];for(int i=0;i<c.numerator;i++) c.accents[i]=i<accents.count ? [accents[i] boolValue] : i==0;
     NSDictionary *a=json[@"automation"];
     c.automation=[a[@"enabled"] boolValue];c.delta=std::clamp([a[@"delta"] intValue],-100,100);c.every=std::clamp([a[@"every"] intValue],1,3600);c.seconds=[a[@"unit"] isEqual:@"seconds"];
     RhythmCommand command;command.config=c;

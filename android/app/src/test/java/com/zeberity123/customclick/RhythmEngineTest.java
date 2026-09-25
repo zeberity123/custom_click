@@ -9,6 +9,7 @@ public class RhythmEngineTest {
     public static void main(String[] args) {
         RhythmEngine fresh = new RhythmEngine(new float[]{1}, new float[]{.5f}, (frame,beat,bar,start,click,high)->{});
         check(fresh.config().bpm == 126 && fresh.currentBpm() == 126, "factory tempo must be 126 BPM");
+        check(fresh.config().note.equals("quarter") && java.util.Arrays.equals(fresh.config().accents,new boolean[]{true,false,false,false}), "factory rhythm must be quarter notes with only the first beat high");
         fresh.configure(new RhythmEngine.Config(176,4,4,"eighth",65,0,new boolean[]{true,true,true,true}));
         check(fresh.config().bpm == 176 && fresh.currentBpm() == 176, "saved tempo must override the factory default");
         String[] notes = {"whole","half","quarter","eighth","sixteenth","triplet","triplet-skip","sixteenth-skip"};

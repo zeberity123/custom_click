@@ -8,7 +8,7 @@ try {
   const page = await app.firstWindow();
   const errors=[]; page.on('pageerror',error=>errors.push(error.message));
   await page.addInitScript(() => {
-    let config = { bpm:126,numerator:4,denominator:4,note:'eighth',volume:65,pan:0,accents:[true,true,true,true] };
+    let config = { bpm:126,numerator:4,denominator:4,note:'quarter',volume:65,pan:0,accents:[true,false,false,false] };
     let playing=false;
     let exportBytes=0;
     window.nativeCalls=[];
@@ -27,7 +27,7 @@ try {
   assert.equal(await page.locator('#language').inputValue(),'en');
   assert.equal(await page.locator('#bpm').inputValue(),'126');
   assert.equal(await page.locator('#settings-meter').textContent(),'4/4');
-  assert.equal(await page.locator('#settings-division small').textContent(),'1/8');
+  assert.equal(await page.locator('#settings-division small').textContent(),'1/4');
   assert.equal(await page.locator('#settings-volume').textContent(),'65%');
   assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()),'#39c5bb');
   for (const viewport of [{width:320,height:568},{width:360,height:640},{width:390,height:760},{width:844,height:320}]) {

@@ -92,10 +92,10 @@ public final class MetronomeService extends Service {
             JSONObject value = new JSONObject(json);
             JSONArray input = value.optJSONArray("accents");
             boolean[] accents = new boolean[input == null ? 0 : Math.min(12,input.length())];
-            for (int i=0;i<accents.length;i++) accents[i] = input.optBoolean(i,true);
+            for (int i=0;i<accents.length;i++) accents[i] = input.optBoolean(i,i==0);
             JSONObject automation = value.optJSONObject("automation");
             if (automation == null) automation = new JSONObject();
-            engine.configure(new RhythmEngine.Config(value.optInt("bpm",RhythmEngine.DEFAULT_BPM), value.optInt("numerator",4), value.optInt("denominator",4), value.optString("note","eighth"), (float)value.optDouble("volume",65), (float)value.optDouble("pan",0), accents, automation.optBoolean("enabled",false), automation.optInt("delta",5), automation.optInt("every",4), automation.optString("unit","bars")));
+            engine.configure(new RhythmEngine.Config(value.optInt("bpm",RhythmEngine.DEFAULT_BPM), value.optInt("numerator",4), value.optInt("denominator",4), value.optString("note","quarter"), (float)value.optDouble("volume",65), (float)value.optDouble("pan",0), accents, automation.optBoolean("enabled",false), automation.optInt("delta",5), automation.optInt("every",4), automation.optString("unit","bars")));
             getSharedPreferences("audio",0).edit().putString("config", configJson().toString()).apply();
             main.post(() -> { if (foreground) getSystemService(NotificationManager.class).notify(NOTIFICATION, notification()); });
         } catch (JSONException failure) { error = "Invalid metronome settings."; }

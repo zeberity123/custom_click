@@ -5,17 +5,17 @@ import { tickEvent, sanitize, TapTempo, PPQ } from '../src/timing.js';
 function clicks(config, ticks) {
   return Array.from({ length: ticks }, (_, i) => ({ tick: i, ...tickEvent(i, sanitize(config)) })).filter(event => event.click);
 }
-test('4/4 reference pattern is eight alternating high and low clicks', () => {
+test('factory 4/4 uses quarter notes with one high and three low clicks', () => {
   const events = clicks({}, PPQ * 4);
-  assert.equal(events.length, 8);
-  assert.deepEqual(events.map(event => event.high), [true, false, true, false, true, false, true, false]);
-  assert.deepEqual(events.map(event => event.beat), [0, 0, 1, 1, 2, 2, 3, 3]);
+  assert.equal(events.length, 4);
+  assert.deepEqual(events.map(event => event.high), [true, false, false, false]);
+  assert.deepEqual(events.map(event => event.beat), [0, 1, 2, 3]);
 });
 test('beat accents change only the selected beat, not offbeat subdivisions', () => {
-  assert.deepEqual(clicks({ accents: [true, false, true, false] }, 192).map(event => event.high), [true, false, false, false, true, false, false, false]);
+  assert.deepEqual(clicks({ note: 'eighth', accents: [true, false, true, false] }, 192).map(event => event.high), [true, false, false, false, true, false, false, false]);
 });
 test('6/8 counts six eighth-note beats per bar at quarter-note BPM', () => {
-  const events = clicks({ numerator: 6, denominator: 8 }, 144);
+  const events = clicks({ numerator: 6, denominator: 8, note: 'eighth' }, 144);
   assert.deepEqual(events.map(event => event.beat), [0, 1, 2, 3, 4, 5]);
   assert.equal(tickEvent(144, sanitize({ numerator: 6, denominator: 8 })).bar, 2);
 });
@@ -32,7 +32,7 @@ test('triplets place three equal hits within each quarter note', () => {
   assert.equal(clicks({ note: 'triplet' }, 192).length, 12);
 });
 test('sparse triplets rest on the second slot without shortening the beat', () => {
-  const events = clicks({ note: 'triplet-skip' }, 96);
+  const events = clicks({ note: 'triplet-skip', accents: [true, true, true, true] }, 96);
   assert.deepEqual(events.map(event => event.tick), [0, 32, 48, 80]);
   assert.deepEqual(events.map(event => event.high), [true, false, true, false]);
 });
@@ -56,7 +56,7 @@ test('invalid saved settings are sanitized; custom meter supports 1–12 beats',
   assert.equal(settings.bpm, 300);
   assert.equal(settings.numerator, 1);
   assert.equal(settings.denominator, 4);
-  assert.equal(settings.note, 'eighth');
+  assert.equal(settings.note, 'quarter');
   assert.equal(settings.pan, -100);
   assert.equal(settings.volume, 65);
   assert.deepEqual(settings.accents, [true]);

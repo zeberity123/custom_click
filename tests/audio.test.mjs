@@ -53,7 +53,7 @@ test('rendered patterns sound only the requested slots, including at tempo limit
     for (const [note, fractions] of Object.entries(offsets)) {
       const processor = new Processor();
       send(processor, { type: 'samples', samples: { high: new Float32Array([1]), low: new Float32Array([.5]) } });
-      send(processor, { type: 'config', config: sanitize({ note, bpm }) });
+      send(processor, { type: 'config', config: sanitize({ note, bpm, accents: [true, true, true, true] }) });
       send(processor, { type: 'start' });
       const framesPerBeat = sampleRate * 60 / bpm;
       const length = Math.floor(framesPerBeat * 4);

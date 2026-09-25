@@ -23,9 +23,9 @@ public:
     }
 };
 struct RhythmConfig {
-    int bpm=126, numerator=4, denominator=4, note=3; // whole, half, quarter, eighth, sixteenth, triplets, sparse patterns
+    int bpm=126, numerator=4, denominator=4, note=2; // whole, half, quarter, eighth, sixteenth, triplets, sparse patterns
     float volume=65, pan=0;
-    std::array<bool,12> accents{true,true,true,true,true,true,true,true,true,true,true,true};
+    std::array<bool,12> accents{true};
     bool automation=false, seconds=false;
     int delta=5, every=4;
 };

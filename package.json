@@ -1,6 +1,6 @@
 {
   "name": "click-studio",
-  "version": "0.5.2",
+  "version": "0.6.1",
   "private": true,
   "type": "module",
   "description": "A precise desktop and Android metronome with reference click samples.",
