@@ -7,7 +7,7 @@ final class ClickViewController: UIViewController, WKNavigationDelegate, WKScrip
     private var web: WKWebView!
     private var server: AssetServer!
     private var origin: URL?
-    private let audio = ClickAudio()
+    private var audio = ClickAudio()
     private var timer: Timer?
     private var playing = false
     private var config: [String: Any] = [:]
@@ -113,15 +113,25 @@ final class ClickViewController: UIViewController, WKNavigationDelegate, WKScrip
     }
     @objc private func interrupted(_ notification: Notification) {
         guard (notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt) == AVAudioSession.InterruptionType.began.rawValue else { return }
-        _ = audio.command("pause", high: false); playing = false
-        UIApplication.shared.isIdleTimerDisabled = false; MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
-        emit("native-state", state())
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            _ = self.audio.command("pause", high: false); self.playing = false
+            UIApplication.shared.isIdleTimerDisabled = false; MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+            self.emit("native-state", self.state())
+        }
     }
     @objc private func routeChanged(_ notification: Notification) {
         let reason = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt
         if reason == AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue { remoteCommand("pause") }
     }
-    @objc private func mediaReset() { remoteCommand("pause") }
+    @objc private func mediaReset() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.audio.stopOutput();self.audio = ClickAudio();self.outputActive = false;self.playing = false
+            UIApplication.shared.isIdleTimerDisabled = false; MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+            self.emit("native-state", self.state())
+        }
+    }
     @objc private func becameActive() { emit("native-state", state()) }
     private func emitFailure(_ error: Error) {
         playing = false; UIApplication.shared.isIdleTimerDisabled = false
@@ -168,8 +178,14 @@ final class ClickViewController: UIViewController, WKNavigationDelegate, WKScrip
             case "cancelExport": cancelExport();reply(true,nil)
             case "finishExport":
                 guard let url = exportURL, exportBytes > 0, presentedViewController == nil else { reply(nil,"Could not save MP3");return }
-                try exportHandle?.close(); exportHandle = nil; exportReply = reply
-                let picker = UIDocumentPickerViewController(forExporting:[url],asCopy:true)
+                try exportHandle?.close(); exportHandle = nil
+                let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString,isDirectory:true)
+                try FileManager.default.createDirectory(at:folder,withIntermediateDirectories:true)
+                let name = payload["filename"] as? String ?? "Click.mp3"
+                let safeName = name.range(of:"^Click-[0-9]{1,3}bpm\\.mp3$",options:.regularExpression) == nil ? "Click.mp3" : name
+                let destination = folder.appendingPathComponent(safeName)
+                try FileManager.default.moveItem(at:url,to:destination);exportURL = destination;exportReply = reply
+                let picker = UIDocumentPickerViewController(forExporting:[destination],asCopy:true)
                 picker.delegate = self;present(picker,animated:true)
             default: reply(nil,"Unknown request")
             }

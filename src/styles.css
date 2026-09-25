@@ -27,7 +27,7 @@ html.android{--safe-top:0px;--safe-bottom:0px;--safe-left:0px;--safe-right:0px}
 html.ios{--safe-top:0px;--safe-bottom:0px;--safe-left:0px;--safe-right:0px}
 html.ios .keyboard-shortcuts,html.ios kbd{display:none}
 html.ios button,html.ios select{min-height:44px}
-html.ios input,html.ios select{font-size:16px}
+html.ios input:not(#bpm),html.ios select{font-size:16px}
 html.mobile body{overflow-x:hidden}
 html.mobile main{padding-top:0}
 html.mobile .app-shell{padding:var(--safe-top) calc(14px + var(--safe-right)) calc(86px + var(--safe-bottom)) calc(14px + var(--safe-left))}
