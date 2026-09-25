@@ -1,6 +1,12 @@
 name: iPad and iPhone build
 on:
   workflow_dispatch:
+    inputs:
+      device:
+        description: Simulator coverage (all by default; select one to rerun a device-specific failure)
+        type: choice
+        default: all
+        options: [all, iPad, iPhone]
   push:
     branches: [ios-port]
     paths: ['ios/**', 'src/**', '.github/workflows/ios.yml']
@@ -23,12 +29,15 @@ jobs:
             ios/build/SHA256SUMS-ios.txt
           if-no-files-found: error
       - name: Test iPad and iPhone in Simulator
+        env:
+          CLICK_TEST_DEVICE: ${{ inputs.device || 'all' }}
         run: |
           python3 - <<'PY'
           import json, subprocess, os
           devices=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','-j']))['devices']
           available=[d for runtime,items in devices.items() if 'iOS' in runtime for d in items]
-          for kind in ['iPad','iPhone']:
+          selected=os.environ['CLICK_TEST_DEVICE']
+          for kind in (['iPad','iPhone'] if selected=='all' else [selected]):
             device=next(d for d in available if kind in d['name'])
             print('Testing',kind,device['name'],flush=True)
             subprocess.run(['xcrun','simctl','boot',device['udid']])

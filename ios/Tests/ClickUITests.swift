@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 
 final class ClickUITests: XCTestCase {
     func testPlaybackAndDialogs() throws {
@@ -29,12 +30,19 @@ final class ClickUITests: XCTestCase {
         // iPad starts with a Cancel control; iPhone opens inside On My iPhone with Save.
         // Scope to native navigation bars so the web dialog behind the picker isn't tapped.
         let cancel = app.navigationBars.buttons["Cancel"].firstMatch
-        let savesFile = !cancel.exists
+        // iPhone briefly exposes Cancel while Files restores its destination.
+        // Wait for the final Save control instead of branching on that transient screen.
+        let savesFile = UIDevice.current.userInterfaceIdiom == .phone
         if savesFile {
             let save = app.navigationBars.buttons["Save"].firstMatch
-            XCTAssertTrue(save.waitForExistence(timeout: 10),app.debugDescription)
+            XCTAssertTrue(save.waitForExistence(timeout: 30),app.debugDescription)
+            let saveReady = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true AND hittable == true"), object: save)
+            XCTAssertEqual(XCTWaiter.wait(for: [saveReady], timeout: 15), .completed)
             save.tap()
-        } else { cancel.tap() }
+        } else {
+            XCTAssertTrue(cancel.waitForExistence(timeout: 15),app.debugDescription)
+            cancel.tap()
+        }
         XCTAssertTrue(app.navigationBars.firstMatch.waitForNonExistence(timeout: 10))
         if savesFile { XCTAssertTrue(app.staticTexts["MP3 saved."].firstMatch.waitForExistence(timeout: 10),app.debugDescription) }
         app.buttons["Close export"].firstMatch.tap()
