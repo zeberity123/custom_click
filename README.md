@@ -2,7 +2,17 @@
 
 A Windows and Android metronome built around the actual high and low clicks in your Cubase recordings, with a #39c5bb teal theme and a matching beat-dot icon.
 
-For another Windows PC, build the portable executable with `npm run package:portable`, then copy **release/portable/Custom-Click-0.4.3-win-x64.exe** and double-click it. No installer, Node.js, or separate sound files are needed on that PC. Published builds are available on [GitHub Releases](https://github.com/zeberity123/custom_click/releases). The executable extracts its bundled runtime into a temporary folder and saves preferences in your Windows user profile. The executable is unsigned.
+For another Windows PC, build the portable executable with `npm run package:portable`, then copy **release/portable/Custom-Click-0.5.2-win-x64.exe** and double-click it. No installer, Node.js, or separate sound files are needed on that PC. Published builds are available on [GitHub Releases](https://github.com/zeberity123/custom_click/releases). The executable extracts its bundled runtime into a temporary folder and saves preferences in your Windows user profile. The executable is unsigned.
+
+## In-app updates
+
+Starting with 0.5.0, **Update** sits immediately to the left of **Export MP3**. Click it to check the latest published stable release on GitHub, then choose **Download update** and **Install update**. Network access occurs only when you request an update check or download. Metronome playback and MP3 export still work offline. Install 0.5.2 or newer manually once to add this button to older versions.
+
+On Windows, the portable app closes, replaces its original EXE, and restarts from the same location, keeping shortcuts and saved settings. The previous EXE is retained with a `.previous` suffix. If the folder is not writable or the file is locked, the app restores the old executable and shows the location of the verified download. Development/unpacked builds launch the downloaded portable app instead of replacing their runtime.
+
+On Android, Click checks the APK's hash, package identity, version code, and signing certificate before opening the system installer. Android may first ask you to allow installations from Click; return and tap **Install update** again. Android always controls the installation confirmation. Existing app data is preserved. The system installer flow needs physical-device validation; the host tests simulate permission and UI behavior.
+
+For future GitHub releases, publish a stable `vMAJOR.MINOR.PATCH` tag with `Custom-Click-MAJOR.MINOR.PATCH-win-x64.exe` and `Custom-Click-MAJOR.MINOR.PATCH-android.apk` assets. Both must have GitHub's generated SHA-256 asset digest. Mark the release as latest after both uploads complete; drafts and prereleases are not update candidates. Increment Android's `versionCode` each time and keep the same application ID and signing key. The current test APK uses the existing debug signing key, which must be retained to update those installations. Never commit the signing key.
 
 ## Automation, MP3 export, and languages
 
@@ -16,13 +26,13 @@ The MP3 encoder is the unmodified [lamejs 1.2.1](https://github.com/zhuker/lamej
 
 ## Android testing build
 
-The Android port has **minimum SDK 31 (Android 12)** and **target/compile SDK 36 (Android 16)**, with no maximum SDK limit. It is intended to run on Android 12 and newer versions. The sideloadable test APK is **release/android/Custom-Click-0.4.3-android.apk** after building.
+The Android port has **minimum SDK 31 (Android 12)** and **target/compile SDK 36 (Android 16)**, with no maximum SDK limit. It is intended to run on Android 12 and newer versions. The sideloadable test APK is **release/android/Custom-Click-0.5.2-android.apk** after building.
 
 Copy that APK to your phone, open it, and allow installation from the app you use to open the file when Android asks. This is a debug-signed test build (`com.zeberity123.customclick.debug`), not a Play Store release. On Android 13+, allow notifications to get the playback notification and Pause control.
 
-The Android interface shares the desktop assets and settings controls. Native `AudioTrack` playback runs on an audio thread in a foreground media service, including when switching apps or locking the screen. Playback pauses on audio-focus loss (for example, calls), disconnecting headphones, or dismissing the app from recents. The screen stays awake during visible playback. Volume uses the media volume stream; all sound files are bundled, and the app requests no Internet permission. App settings are saved on the phone.
+The Android interface shares the desktop assets and settings controls. Native `AudioTrack` playback runs on an audio thread in a foreground media service, including when switching apps or locking the screen. Playback pauses on audio-focus loss (for example, calls), disconnecting headphones, or dismissing the app from recents. The screen stays awake during visible playback. Volume uses the media volume stream; all sound files are bundled. Internet and package-install permissions support user-requested GitHub updates. App settings are saved on the phone.
 
-Both desktop and mobile open directly on the tempo controls, without the introductory heading or reference-sample previews. Sound settings contain volume, stereo pan, and tempo automation. On mobile, Start/Pause and Reset stay at the bottom. Tap **Rhythm & sound** or swipe left across the panel to open the right-side drawer; swipe right, tap outside, or use its close button to return. The drawer contains rhythm settings, volume, stereo pan, and tempo automation. Android reserves status-bar, navigation-bar, cutout, and keyboard space around the entire WebView, following [Android's WebView inset guidance](https://developer.android.com/develop/ui/views/layout/webapps/understand-window-insets).
+Both desktop and mobile open directly on the tempo controls, without the introductory heading or reference-sample previews. Sound settings contain volume, stereo pan, and tempo automation. On mobile, Start/Pause and Reset stay at the bottom. The menu button shows the current time signature, click-division symbol and fraction, and volume percentage. Tap that button or the arrow handle beside Tap Tempo, or swipe right across the main panel, to open the right-side drawer. Swiping left also opens it. While the drawer is open, swipe right, tap outside, or use its close button to return. Android Back closes an open Update or Export MP3 dialog or the time signature drawer before leaving the app; closing an active export cancels it. Android 13+ registers its Back callback only while an overlay is open, leaving system navigation available on the main screen; Android 12 uses the legacy Back callback. The drawer contains rhythm settings, volume, stereo pan, and tempo automation. Android reserves status-bar, navigation-bar, cutout, and keyboard space around the entire WebView, following [Android's WebView inset guidance](https://developer.android.com/develop/ui/views/layout/webapps/understand-window-insets).
 
 **Validation:** the APK builds and passes Android lint with no errors; native rendered audio tests cover all divisions at 10, 176, and 300 BPM, rests, pause/reset, stereo panning, mute, and bar/second automation. Host UI tests cover all three languages, automation, MP3 encoding and the Android save bridge. The packaged Windows MP3 is decoded to verify automated duration and stereo output. No physical Android device or emulator was available; Android’s system file picker and notification language changes still need device confirmation. Check launch, click timing, lock-screen playback, notifications, interruptions and Bluetooth latency on a phone before relying on it for a performance. OS support configuration is not a claim of testing on every Android version.
 
@@ -90,7 +100,7 @@ npm run test:portable    # Test the standalone executable from a separate folder
 npm run dev         # Browser preview at http://127.0.0.1:4173
 ```
 
-The app is offline. The MP3 encoder is bundled locally; development and packaging tools use npm packages. Screenshots from desktop tests are written to `artifacts/`.
+Playback and MP3 export work offline. Only the Update flow connects to GitHub. The MP3 encoder is bundled locally; development and packaging tools use npm packages. Screenshots from desktop tests are written to `artifacts/`.
 
 ## Architecture and platform scope
 

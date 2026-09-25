@@ -91,3 +91,19 @@ html.mobile .app-header{flex-shrink:0}
 html.mobile main{display:flex;flex:1}
 html.mobile .workspace{display:flex;flex:1;min-width:0}
 html.mobile .metronome{width:100%;min-height:0}
+#update-status{font-size:13px;line-height:1.6}#update-progress{width:100%;accent-color:var(--accent)}
+#download-update,#install-update{background:var(--accent);color:#193836}
+@media(max-width:380px){html.mobile .brand{font-size:24px}html.mobile .brand-icon{width:24px;height:24px;margin-right:5px}html.mobile .header-actions{gap:4px}html.mobile #language,html.mobile .header-button{font-size:9px;padding:6px}}
+.drawer-handle{display:none}
+html.mobile .drawer-toggle{gap:0;justify-content:center;padding:5px 10px}
+html.mobile .drawer-toggle .settings-meter{font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;min-width:55px}
+html.mobile .drawer-toggle .settings-division{display:flex;align-items:center;justify-content:center;gap:8px;min-width:90px;margin:0 16px;padding:0 16px;border-left:1px solid #3d5351;border-right:1px solid #3d5351}
+.settings-division>span:not(.pattern-slots){font-family:'Segoe UI Symbol','Noto Music',serif;font-size:23px;line-height:24px}
+.settings-division small{font-size:11px;font-variant-numeric:tabular-nums}
+.settings-division .pattern-slots{margin:0}
+html.mobile .drawer-toggle .settings-volume{display:flex;align-items:center;gap:7px;font-variant-numeric:tabular-nums}
+html.mobile .drawer-toggle .settings-volume span{font-size:13px}
+.settings-volume svg,.drawer-handle svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+html.mobile .drawer-toggle .settings-menu-icon{font-size:15px;margin-left:auto;padding-left:12px}
+html.mobile .tap-row{position:relative}
+html.mobile .drawer-handle{position:absolute;right:-32px;top:50%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;width:40px;height:48px;border:1px solid #3d5351;border-right:0;border-radius:9px 0 0 9px;background:#233231;color:var(--accent);touch-action:pan-y pinch-zoom}

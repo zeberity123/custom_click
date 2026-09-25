@@ -28,6 +28,8 @@ public final class MainActivity extends Activity {
     private FileOutputStream exportStream;
     private long exportBytes;
     private boolean exportPicker;
+    private android.window.OnBackInvokedCallback backCallback;
+    private boolean backInFlight;
     private final ServiceConnection connection = new ServiceConnection() {
         public void onServiceConnected(ComponentName name, IBinder binder) { service = ((MetronomeService.LocalBinder)binder).getService(); }
         public void onServiceDisconnected(ComponentName name) { service = null; }
@@ -71,6 +73,7 @@ public final class MainActivity extends Activity {
                 try { return new WebResourceResponse(mime, "UTF-8", 200, "OK", Map.of("Cache-Control", "no-store"), getAssets().open("web" + asset)); }
                 catch (Exception error) { return blocked(); }
             }
+            @Override public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) { setBackHandlerEnabled(false); }
             @Override public void onPageFinished(WebView view, String url) { content.requestApplyInsets(); }
         });
         setContentView(content);
@@ -78,6 +81,32 @@ public final class MainActivity extends Activity {
         bound = bindService(new Intent(this, MetronomeService.class), connection, Context.BIND_AUTO_CREATE);
         web.loadUrl("https://appassets.androidplatform.net/index.html");
     }
+    private void setBackHandlerEnabled(boolean enabled) {
+        if (Build.VERSION.SDK_INT < 33 || isDestroyed()) return;
+        if (enabled && backCallback == null) {
+            backCallback = this::handleBack;
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, backCallback);
+        } else if (!enabled && backCallback != null) {
+            getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(backCallback);
+            backCallback = null;
+        }
+    }
+    private void handleBack() {
+        if (backInFlight || web == null || isFinishing() || isDestroyed()) return;
+        backInFlight = true;
+        web.evaluateJavascript("typeof window.handleAndroidBack === 'function' && window.handleAndroidBack()", result -> {
+            backInFlight = false;
+            if (isFinishing() || isDestroyed()) return;
+            if (!"true".equals(result)) {
+                setBackHandlerEnabled(false);
+                // Android 12's root-activity Back behavior: keep playback and app state.
+                if (Build.VERSION.SDK_INT < 33) moveTaskToBack(true);
+            }
+        });
+    }
+    // Android 12 fallback only; API 33+ uses OnBackInvokedCallback above.
+    @android.annotation.SuppressLint("GestureBackNavigation")
+    @Override public void onBackPressed() { if (Build.VERSION.SDK_INT < 33) handleBack(); }
     private WebResourceResponse blocked() { return new WebResourceResponse("text/plain", "UTF-8", 404, "Not found", Map.of(), new ByteArrayInputStream(new byte[0])); }
     public static void emit(String type, JSONObject data) {
         MainActivity activity = current.get();
@@ -92,6 +121,9 @@ public final class MainActivity extends Activity {
         });
     }
     private final class NativeBridge {
+        @JavascriptInterface public void setBackHandlerEnabled(boolean enabled) { runOnUiThread(() -> MainActivity.this.setBackHandlerEnabled(enabled)); }
+        @JavascriptInterface public String updateState() { return UpdateManager.get(MainActivity.this).snapshot(); }
+        @JavascriptInterface public void updateAction(String command) { UpdateManager.get(MainActivity.this).action(command,MainActivity.this); }
         @JavascriptInterface public void setLanguage(String language) {
             if (!language.equals("en") && !language.equals("ko") && !language.equals("ja")) return;
             getSharedPreferences("ui",0).edit().putString("language",language).apply();
@@ -188,6 +220,7 @@ public final class MainActivity extends Activity {
     @Override protected void onResume() { super.onResume(); visible = true; current = new WeakReference<>(this); if (web != null) { web.onResume(); if (service != null) emit("native-state", service.snapshot()); } }
     @Override protected void onPause() { visible = false; super.onPause(); }
     @Override protected void onDestroy() {
+        setBackHandlerEnabled(false);
         cancelExportFile();
         if (current.get() == this) current.clear();
         if (bound) unbindService(connection);

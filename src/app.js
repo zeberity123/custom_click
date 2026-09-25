@@ -3,6 +3,8 @@ import { ClickAudio } from './audio.js';
 import { NativeAudio } from './native-audio.js';
 import { t, initLanguage } from './i18n.js';
 import { setupExport } from './export-ui.js';
+import { setupUpdates } from './update-ui.js';
+import { setupAndroidBack } from './android-back.js';
 
 const isAndroid = typeof window.NativeClick !== 'undefined';
 if (isAndroid) document.documentElement.classList.add('android');
@@ -12,10 +14,13 @@ const mobileQuery = matchMedia('(max-width: 650px)');
 const drawer = $('#settings-drawer');
 const drawerBackground = [...document.querySelectorAll('.app-header, .metronome, #error')];
 let drawerOpen = false;
+let drawerTrigger;
 function setDrawer(open, restoreFocus = true) {
+  if (open && !drawerOpen) drawerTrigger = document.activeElement;
   drawerOpen = open && document.documentElement.classList.contains('mobile');
   document.documentElement.classList.toggle('drawer-open', drawerOpen);
   $('#open-settings').setAttribute('aria-expanded', String(drawerOpen));
+  $('#drawer-handle').setAttribute('aria-expanded', String(drawerOpen));
   $('#drawer-backdrop').hidden = !drawerOpen;
   drawer.inert = !drawerOpen && document.documentElement.classList.contains('mobile');
   drawerBackground.forEach(element => { element.inert = drawerOpen; });
@@ -26,7 +31,7 @@ function setDrawer(open, restoreFocus = true) {
   } else {
     drawer.removeAttribute('role');
     drawer.removeAttribute('aria-modal');
-    if (restoreFocus) $('#open-settings').focus({ preventScroll: true });
+    if (restoreFocus) (drawerTrigger?.matches('#open-settings, #drawer-handle') ? drawerTrigger : $('#open-settings')).focus({ preventScroll: true });
   }
 }
 function syncMobileLayout() {
@@ -36,6 +41,7 @@ function syncMobileLayout() {
 mobileQuery.addEventListener('change', syncMobileLayout);
 syncMobileLayout();
 $('#open-settings').addEventListener('click', () => setDrawer(true));
+$('#drawer-handle').addEventListener('click', () => setDrawer(true));
 $('#close-settings').addEventListener('click', () => setDrawer(false));
 $('#drawer-backdrop').addEventListener('click', () => setDrawer(false));
 document.addEventListener('keydown', event => {
@@ -52,7 +58,7 @@ document.addEventListener('keydown', event => {
 let swipe;
 document.addEventListener('pointerdown', event => {
   swipe = null;
-  if (!document.documentElement.classList.contains('mobile') || !event.isPrimary || event.pointerType === 'mouse' || event.target.closest('button, input, select, a')) return;
+  if (!document.documentElement.classList.contains('mobile') || !event.isPrimary || (event.pointerType === 'mouse' && !event.target.closest('#drawer-handle')) || (event.target.closest('button, input, select, a') && !event.target.closest('#drawer-handle'))) return;
   swipe = { id: event.pointerId, x: event.clientX, y: event.clientY, open: drawerOpen };
 });
 document.addEventListener('pointercancel', () => { swipe = null; });
@@ -60,7 +66,8 @@ document.addEventListener('pointerup', event => {
   if (!swipe || swipe.id !== event.pointerId) return;
   const dx = event.clientX - swipe.x, dy = event.clientY - swipe.y;
   if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-    if (!swipe.open && dx < 0) setDrawer(true);
+    // Accept rightward opening swipes as well as the existing leftward edge gesture.
+    if (!swipe.open) setDrawer(true);
     else if (swipe.open && dx > 0) setDrawer(false);
   }
   swipe = null;
@@ -133,6 +140,7 @@ function render() {
   $('#pan').value = config.pan;
   $('#pan-value').textContent = config.pan === 0 ? t('Center') : t(config.pan < 0 ? '{pan}% left' : '{pan}% right', {pan:Math.abs(config.pan)});
   $('#beat-unit').textContent = t('1 beat = {note}', {note:t(({2:'Half note',4:'Quarter note',8:'Eighth note',16:'Sixteenth note'})[config.denominator])});
+  renderSettingsSummary();
   renderAutomation();
   renderBeats();
 }
@@ -225,6 +233,18 @@ function commitTempo() {
   if (input.value.trim() === '') { renderCurrentTempo(); return; }
   update({ bpm: input.value });
 }
+function renderSettingsSummary() {
+  const meter = `${config.numerator}/${config.denominator}`;
+  const volume = String(Math.round(config.volume)).padStart(2, '0');
+  $('#settings-meter').textContent = meter;
+  $('#settings-volume').textContent = `${volume}%`;
+  const selected = document.querySelector(`[data-note="${config.note}"]`);
+  const symbol = selected.querySelector('span').cloneNode(true);
+  const fraction = document.createElement('small');
+  fraction.textContent = ({triplet:'3', 'triplet-skip':'3', 'sixteenth-skip':'1/16'})[config.note] ?? selected.querySelector('small').textContent;
+  $('#settings-division').replaceChildren(symbol, fraction);
+  $('#open-settings').setAttribute('aria-label', t('Time signature {meter}, {division}, volume {volume}%. Open settings.', {meter,division:t(noteNames[config.note]),volume}));
+}
 $('#bpm').addEventListener('input', () => { editingTempo = true; });
 $('#bpm').addEventListener('change', commitTempo);
 $('#bpm').addEventListener('blur', () => { commitTempo(); renderCurrentTempo(); });
@@ -242,7 +262,7 @@ $('#volume').addEventListener('input', event => update({ volume: Number(event.ta
 $('#pan').addEventListener('input', event => update({ pan: Number(event.target.value) }));
 $('#center-pan').addEventListener('click', () => update({ pan: 0 }));
 document.addEventListener('keydown', event => {
-  if (drawerOpen || $('#export-dialog').open) return;
+  if (drawerOpen || $('#export-dialog').open || $('#update-dialog').open) return;
   if (event.ctrlKey || event.metaKey || event.altKey || event.target.closest('input, select, textarea, [contenteditable]')) return;
   if (event.repeat) return;
   if (event.code === 'Space' && event.target.closest('#automation-enabled')) return;
@@ -306,6 +326,8 @@ function changeAutomation() {
 $('#automation-enabled').addEventListener('click', () => update({ automation: { ...config.automation, enabled: !config.automation.enabled } }));
 for (const id of ['automation-direction','automation-delta','automation-every','automation-unit']) $('#'+id).addEventListener('change',changeAutomation);
 const refreshExport = setupExport(() => config);
-initLanguage(() => { render(); renderTransport(); renderPosition(); $('#tap-hint').textContent = t('Tap at least twice'); refreshExport(); });
+const refreshUpdates = setupUpdates(async () => { if (playing) await togglePlayback(); });
+setupAndroidBack(() => drawerOpen, () => setDrawer(false));
+initLanguage(() => { render(); renderTransport(); renderPosition(); $('#tap-hint').textContent = t('Tap at least twice'); refreshExport(); refreshUpdates(); });
 animate();
 if (isAndroid) audio.init().then(() => syncNativeState(audio.snapshot())).catch(error => showError(error.message));

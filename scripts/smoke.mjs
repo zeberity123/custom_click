@@ -21,7 +21,7 @@ try {
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   assert.equal(await page.locator('#bpm').inputValue(), '126');
-  assert.equal(await page.locator('.rhythm-panel .section-label').textContent(), 'Time Signature');
+  assert.equal(await page.locator('.rhythm-panel .section-label').textContent(), 'TIME SIGNATURE');
   assert.equal(await page.locator('#play-label').textContent(), 'Start');
   // Existing saved tempos, including the previous factory value, survive an upgrade/reload.
   await page.locator('#bpm').fill('176');

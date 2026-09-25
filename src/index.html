@@ -14,8 +14,8 @@
   <div class="app-shell">
     <header class="app-header">
       <a class="brand" href="#" aria-label="Click home"><img class="brand-icon" src="./assets/icon.svg" alt="">click<span class="brand-period">.</span></a>
-      <div class="header-actions"><button id="open-export" class="header-button">Export MP3</button><select id="language" aria-label="Language"><option value="en">English</option><option value="ko">한국어</option><option value="ja">日本語</option></select></div>
-      <button id="open-settings" class="drawer-toggle" aria-controls="settings-drawer" aria-expanded="false">Rhythm &amp; sound <span aria-hidden="true">☰</span></button>
+      <div class="header-actions"><button id="open-update" class="header-button">Update</button><button id="open-export" class="header-button">Export MP3</button><select id="language" aria-label="Language"><option value="en">English</option><option value="ko">한국어</option><option value="ja">日本語</option></select></div>
+      <button id="open-settings" class="drawer-toggle" aria-controls="settings-drawer" aria-expanded="false"><span id="settings-meter" class="settings-meter" aria-hidden="true">4/4</span><span id="settings-division" class="settings-division" aria-hidden="true"></span><span class="settings-volume" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4zM17 8a6 6 0 0 1 0 8"/></svg><span id="settings-volume">65%</span></span><span class="settings-menu-icon" aria-hidden="true">☰</span></button>
     </header>
     <main>
       <div id="error" class="error-banner" role="alert" hidden></div>
@@ -28,7 +28,7 @@
             <button class="step-button" id="increase" aria-label="Increase tempo">+</button>
           </div>
           <div class="tempo-slider"><input id="tempo-range" type="range" min="10" max="300" value="126" aria-label="Tempo"><div class="range-endpoints"><span>10 BPM</span><span>300 BPM</span></div></div>
-          <div class="tap-row"><span>Or feel it out</span><button id="tap" class="tap-button">Tap tempo <kbd>T</kbd></button><span id="tap-hint">Tap at least twice</span></div>
+          <div class="tap-row"><span>Or feel it out</span><button id="tap" class="tap-button">Tap tempo <kbd>T</kbd></button><span id="tap-hint">Tap at least twice</span><button id="drawer-handle" class="drawer-handle" aria-label="Open time signature menu" aria-controls="settings-drawer" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m14 6-6 6 6 6M20 5v14"/></svg></button></div>
           <div class="keyboard-shortcuts"><span><kbd>SPACE</kbd> play / pause <span class="footer-divider">/</span> <kbd>T</kbd> tap <span class="footer-divider">/</span> <kbd>↑</kbd> <kbd>↓</kbd> tempo</span></div>
           <div class="beat-section"><div class="beat-heading"><span class="section-label">BEAT PATTERN</span><span>Click a beat to switch pitch</span></div><div id="beats" class="beats" aria-label="Beat pitch controls"></div><div class="beat-legend"><span><i class="high-key"></i> High</span><span><i class="low-key"></i> Low</span><span class="beat-unit" id="beat-unit">1 beat = quarter note</span></div></div>
           <div class="transport"><button id="reset" class="reset-button" aria-label="Reset to first beat" title="Reset to first beat (R)">↺</button><button id="play" class="play-button"><span id="play-icon" aria-hidden="true">▶</span><span id="play-label">Start</span><kbd>SPACE</kbd></button></div>
@@ -37,7 +37,7 @@
         <div id="drawer-backdrop" class="drawer-backdrop" hidden></div>
         <aside id="settings-drawer" class="settings-column" aria-label="Rhythm and sound" tabindex="-1">
           <div class="drawer-heading"><h2>Rhythm &amp; sound</h2><button id="close-settings" aria-label="Close rhythm and sound">×</button></div>
-          <section class="panel rhythm-panel"><div class="panel-top"><span class="section-label">Time Signature</span><span class="panel-icon" aria-hidden="true">♬</span></div>
+          <section class="panel rhythm-panel"><div class="panel-top"><span class="section-label">TIME SIGNATURE</span><span class="panel-icon" aria-hidden="true">♬</span></div>
             <div id="custom-meter" class="custom-meter"><label>Beats <input id="numerator" type="number" min="1" max="12" value="4"></label><span>/</span><label>Notes <select id="denominator"><option>2</option><option selected>4</option><option>8</option><option>16</option></select></label></div>
             <div class="field-label subdivision-label">Click division <span id="division-name">Eighth note</span></div>
             <div class="note-options" role="group" aria-label="Click division"><button data-note="whole" aria-label="Whole note" aria-pressed="false"><span>𝅝</span><small>1</small></button><button data-note="half" aria-label="Half note" aria-pressed="false"><span>𝅗𝅥</span><small>1/2</small></button><button data-note="quarter" aria-label="Quarter note" aria-pressed="false"><span>♩</span><small>1/4</small></button><button data-note="eighth" aria-label="Eighth note" aria-pressed="true"><span>♪</span><small>1/8</small></button><button data-note="sixteenth" aria-label="Sixteenth note" aria-pressed="false"><span>♬</span><small>1/16</small></button></div>
@@ -65,6 +65,14 @@
       </div>
     </main>
   </div>
+  <dialog id="update-dialog" aria-labelledby="update-title">
+    <div class="dialog-heading"><h2 id="update-title">Update Click</h2><button type="button" id="close-update" aria-label="Close update">×</button></div>
+    <p id="update-version" class="export-help"></p>
+    <p id="update-status" role="status" aria-live="polite"></p>
+    <progress id="update-progress" max="100" value="0" hidden></progress>
+    <p id="update-install-note" class="export-help" hidden></p>
+    <div class="export-actions"><button type="button" id="check-update">Check again</button><button type="button" id="download-update" hidden>Download update</button><button type="button" id="install-update" hidden>Install update</button></div>
+  </dialog>
   <dialog id="export-dialog" aria-labelledby="export-title">
     <form id="export-form">
       <div class="dialog-heading"><h2 id="export-title">Export MP3</h2><button type="button" id="close-export" aria-label="Close export">×</button></div>

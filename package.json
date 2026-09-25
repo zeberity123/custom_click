@@ -1,6 +1,6 @@
 {
   "name": "click-studio",
-  "version": "0.4.3",
+  "version": "0.5.2",
   "private": true,
   "type": "module",
   "description": "A precise desktop and Android metronome with reference click samples.",
@@ -22,7 +22,9 @@
     "android:setup": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-android.ps1",
     "android:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-android.ps1",
     "test:android-engine": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-android-engine.ps1",
-    "test:android-ui": "node scripts/test-android-ui.mjs"
+    "test:android-ui": "node scripts/test-android-ui.mjs",
+    "test:update": "node scripts/test-update-ui.mjs",
+    "test:update-helper": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-update-helper.ps1"
   },
   "devDependencies": {
     "@electron/packager": "^20.3.0",

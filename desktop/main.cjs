@@ -1,4 +1,5 @@
-const { app, BrowserWindow, protocol, net, powerSaveBlocker, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, protocol, net, powerSaveBlocker, ipcMain, dialog, shell } = require('electron');
+const { createUpdater } = require('./updater.cjs');
 const { writeFile } = require('node:fs/promises');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
@@ -10,6 +11,10 @@ protocol.registerSchemesAsPrivileged([{ scheme: 'click', privileges: {
 let window;
 let saving = false;
 app.whenReady().then(() => {
+  const updater = createUpdater(app, shell);
+  const trusted = event => event.sender === window?.webContents && event.senderFrame === event.sender.mainFrame && event.senderFrame.url.startsWith('click://app/');
+  ipcMain.handle('update-state', event => trusted(event) ? updater.snapshot() : null);
+  ipcMain.handle('update-action', (event, command) => trusted(event) && ['check','download','install'].includes(command) ? updater.action(command) : null);
   ipcMain.handle('save-mp3', async (event, bytes, filename) => {
     if (event.sender !== window?.webContents || event.senderFrame !== event.sender.mainFrame || !event.senderFrame.url.startsWith('click://app/') || !(bytes instanceof ArrayBuffer) || bytes.byteLength < 1 || bytes.byteLength > 90000000 || saving) return { error: true };
     saving = true;
