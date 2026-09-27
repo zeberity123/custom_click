@@ -37,6 +37,10 @@ try {
   await page.waitForTimeout(350);
   assert.equal(await page.locator('#bpm').inputValue(), heldTempo);
   await page.locator('#bpm').fill('176'); await page.locator('#bpm').press('Enter');
+  await page.locator('#bpm').fill('150');
+  await page.locator('#increase').click();
+  assert.equal(await page.locator('#bpm').inputValue(), '151');
+  await page.locator('#bpm').fill('176'); await page.locator('#bpm').press('Enter');
   assert.equal(await page.locator('.beat-button').count(), 4);
   assert.equal(await page.locator('#meter').count(), 0);
   assert.equal(await page.locator('#custom-meter').isVisible(), true);

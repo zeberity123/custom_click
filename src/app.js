@@ -266,8 +266,13 @@ $('#bpm').addEventListener('change', commitTempo);
 $('#bpm').addEventListener('blur', () => { commitTempo(); renderCurrentTempo(); });
 $('#bpm').addEventListener('keydown', event => { if (event.key === 'Enter') { commitTempo(); event.currentTarget.blur(); } });
 $('#tempo-range').addEventListener('input', event => update({ bpm: event.target.value }));
-setupTempoButton($('#decrease'), step => update({ bpm: displayedTempo() - step }));
-setupTempoButton($('#increase'), step => update({ bpm: displayedTempo() + step }));
+function stepTempo(delta) {
+  // Pointer-down runs before the tempo field loses focus; commit typed edits first.
+  commitTempo();
+  update({ bpm: displayedTempo() + delta });
+}
+setupTempoButton($('#decrease'), step => stepTempo(-step));
+setupTempoButton($('#increase'), stepTempo);
 $('#tap').addEventListener('click', tap);
 $('#play').addEventListener('click', togglePlayback);
 $('#reset').addEventListener('click', reset);
