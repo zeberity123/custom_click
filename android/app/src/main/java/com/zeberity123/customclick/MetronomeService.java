@@ -18,8 +18,6 @@ public final class MetronomeService extends Service {
     private RhythmEngine engine;
     private volatile boolean alive = true, foreground;
     private volatile String error = "";
-    private AudioManager manager;
-    private AudioFocusRequest focus;
     private PowerManager.WakeLock wake;
     private MediaSession session;
     private Thread worker;
@@ -31,10 +29,6 @@ public final class MetronomeService extends Service {
     @Override public IBinder onBind(Intent intent) { return binder; }
     @Override public void onCreate() {
         super.onCreate();
-        manager = (AudioManager)getSystemService(AUDIO_SERVICE);
-        focus = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN).setAudioAttributes(attributes()).setOnAudioFocusChangeListener(change -> {
-            if (change < 0) { pause(); emitState("Audio focus lost. Tap Resume when you are ready."); }
-        }, main).build();
         wake = ((PowerManager)getSystemService(POWER_SERVICE)).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "CustomClick:audio");
         wake.setReferenceCounted(false);
         refreshLanguage();
@@ -126,7 +120,10 @@ public final class MetronomeService extends Service {
         String action = intent == null ? STOP : intent.getAction();
         if (PLAY.equals(action)) {
             startForeground(NOTIFICATION,notification()); foreground = true;
-            if (engine == null || !error.isEmpty() || manager.requestAudioFocus(focus) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            // A practice click accompanies other media. Do not request audio focus:
+            // taking it pauses/ducks the backing track, and losing it stops the click.
+            // AudioTrack mixes with other apps while the foreground service keeps time.
+            if (engine == null || !error.isEmpty()) {
                 pause(); emitState(error.isEmpty() ? "Audio output is in use. Try again." : error);
             } else {
                 if (!wake.isHeld()) wake.acquire();
@@ -137,7 +134,6 @@ public final class MetronomeService extends Service {
     }
     public void pause() {
         if (engine != null) engine.pause();
-        manager.abandonAudioFocusRequest(focus);
         if (wake.isHeld()) wake.release();
         updateMediaState(false); session.setActive(false);
         stopForeground(STOP_FOREGROUND_REMOVE); foreground = false; stopSelf(); emitState("");
@@ -211,7 +207,6 @@ public final class MetronomeService extends Service {
         wakeWorker();
         if (engine != null) engine.pause();
         if (worker != null) worker.interrupt();
-        manager.abandonAudioFocusRequest(focus);
         if (wake.isHeld()) wake.release();
         session.release(); unregisterReceiver(noisy);
         super.onDestroy();
