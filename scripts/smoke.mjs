@@ -70,6 +70,9 @@ try {
     assert.equal(await page.locator('#error').isHidden(), true);
     await page.locator('#reset').click();
   }
+  assert.equal(await page.locator('.beat-button').nth(1).getAttribute('data-high'), 'false');
+  await page.locator('.beat-button').nth(1).click();
+  assert.equal(await page.locator('.beat-button').nth(1).getAttribute('data-high'), 'true');
   await page.locator('.beat-button').nth(1).click();
   assert.equal(await page.locator('.beat-button').nth(1).getAttribute('data-high'), 'false');
   await page.locator('#numerator').fill('6');
