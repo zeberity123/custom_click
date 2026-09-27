@@ -26,12 +26,12 @@ final class ClickUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Save MP3"].firstMatch.waitForNonExistence(timeout: 10),app.debugDescription)
         app.buttons["Export MP3"].firstMatch.tap()
         app.buttons["Save MP3"].firstMatch.tap()
-        let saved = app.staticTexts.containing(NSPredicate(format:"label BEGINSWITH 'MP3 saved:'")).firstMatch
+        let saved = app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH 'MP3 saved:'")).firstMatch
         XCTAssertTrue(saved.waitForExistence(timeout: 60),app.debugDescription)
         XCTAssertTrue(saved.label.contains("Click → Exports"))
         // Save twice: both files must survive, without silently replacing the first export.
         app.buttons["Save MP3"].firstMatch.tap()
-        let second = app.staticTexts.containing(NSPredicate(format:"label CONTAINS '(2).mp3'")).firstMatch
+        let second = app.staticTexts.matching(NSPredicate(format:"label CONTAINS '(2).mp3'")).firstMatch
         XCTAssertTrue(second.waitForExistence(timeout: 60),app.debugDescription)
         app.buttons["Close export"].firstMatch.tap()
         XCTAssertTrue(app.buttons["Save MP3"].firstMatch.waitForNonExistence(timeout: 10),app.debugDescription)
