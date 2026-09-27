@@ -4,9 +4,9 @@ import { exportDuration } from './export-renderer.js';
 export function setupExport(getConfig) {
   const $ = selector => document.querySelector(selector);
   const dialog = $('#export-dialog');
-  let worker, busy = false, message = '', progress = 0, request = 0;
+  let worker, busy = false, message = '', progress = 0, request = 0, savedFile = '', savedDevice = '';
   function refresh() {
-    $('#export-status').textContent = message ? t(message,{progress}) : '';
+    $('#export-status').textContent = message ? t(message,{progress,filename:savedFile,device:savedDevice}) : '';
     $('#export-progress').hidden = !busy;
     $('#export-progress').value = progress;
     for (const id of ['save-export','export-length','export-unit']) $('#'+id).disabled = busy;
@@ -38,7 +38,11 @@ export function setupExport(getConfig) {
       if (token !== request) return;
       const result = await window.IOSClick.call('finishExport', { filename });
       if (token !== request) return;
-      busy = false; message = result.saved ? 'MP3 saved.' : 'Export cancelled.'; refresh(); return;
+      busy = false;
+      savedFile = result.filename ?? filename;
+      savedDevice = result.device === 'iPad' ? 'iPad' : 'iPhone';
+      message = result.saved ? 'MP3 saved: {filename}. Files → On My {device} → Click → Exports.' : 'Export cancelled.';
+      refresh(); return;
     } else if (window.NativeClick) {
       if (!window.NativeClick.beginExport?.()) throw new Error('exportFailed');
       // Small bridge chunks avoid a large base64 string on the Android UI thread.

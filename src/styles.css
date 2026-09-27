@@ -28,7 +28,9 @@ html.ios{--safe-top:0px;--safe-bottom:0px;--safe-left:0px;--safe-right:0px}
 html.ios .keyboard-shortcuts,html.ios kbd{display:none}
 html.ios button,html.ios select{min-height:44px}
 html.ios input:not(#bpm),html.ios select{font-size:16px}
-html.ios button{touch-action:manipulation}
+html.ios,html.ios body,html.ios button{touch-action:manipulation}
+.step-button{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+html.ios .step-button{touch-action:none}
 @media(hover:none){html.ios button:hover{filter:none}}
 html.mobile body{overflow-x:hidden}
 html.mobile main{padding-top:0}

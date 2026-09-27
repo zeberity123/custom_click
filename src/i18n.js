@@ -1,4 +1,5 @@
 const phrases = [
+  ['MP3 saved: {filename}. Files → On My {device} → Click → Exports.','MP3 저장 완료: {filename}. 파일 → 나의 {device} → Click → Exports에서 찾으세요.','MP3 を保存しました: {filename}。ファイル → この {device} 内 → Click → Exports。'],
   ['Install iPad and iPhone updates using the same app you used to sideload Click.','Click을 설치한 사이드로딩 앱으로 iPad 및 iPhone 업데이트를 설치하세요.','Clickをインストールしたサイドロード用アプリでiPadとiPhoneを更新してください。'],
   ['Open GitHub releases','GitHub 릴리스 열기','GitHubリリースを開く'],
   ['Update','업데이트','更新'], ['Update Click','Click 업데이트','Click を更新'], ['Close update','업데이트 닫기','更新を閉じる'],

@@ -28,6 +28,15 @@ try {
   await page.locator('#bpm').press('Enter');
   await page.reload();
   assert.equal(await page.locator('#bpm').inputValue(), '176');
+  const increase = await page.locator('#increase').boundingBox();
+  await page.mouse.move(increase.x + increase.width / 2, increase.y + increase.height / 2);
+  await page.mouse.down();
+  await page.waitForFunction(() => Number(document.querySelector('#bpm').value) >= 197);
+  await page.mouse.up();
+  const heldTempo = await page.locator('#bpm').inputValue();
+  await page.waitForTimeout(350);
+  assert.equal(await page.locator('#bpm').inputValue(), heldTempo);
+  await page.locator('#bpm').fill('176'); await page.locator('#bpm').press('Enter');
   assert.equal(await page.locator('.beat-button').count(), 4);
   assert.equal(await page.locator('#meter').count(), 0);
   assert.equal(await page.locator('#custom-meter').isVisible(), true);

@@ -19,7 +19,11 @@ try {
       }
       if(command==='beginExport'){bytes=0;return true;}
       if(command==='appendExport'){bytes+=atob(payload.data).length;return true;}
-      if(command==='finishExport'){window.exportBytes=bytes;return {saved:true};}
+      if(command==='finishExport'){
+        window.exportBytes=bytes;
+        if(window.failExport)throw new Error('Disk full');
+        return {saved:true,filename:payload.filename,device:'iPad'};
+      }
       return true;
     }};
   });
@@ -53,8 +57,15 @@ try {
   await page.locator('#open-export').click();
   await page.locator('#export-length').fill('1');await page.locator('#export-unit').selectOption('seconds');
   await page.locator('#save-export').click();
-  await page.waitForFunction(()=>document.querySelector('#export-status').textContent==='MP3 saved.');
+  await page.waitForFunction(()=>document.querySelector('#export-status').textContent==='MP3 saved: Click-140bpm.mp3. Files → On My iPad → Click → Exports.');
   assert.ok(await page.evaluate(()=>window.exportBytes>20000));
+  await page.evaluate(()=>{window.failExport=true;});
+  await page.locator('#save-export').click();
+  await page.waitForFunction(()=>document.querySelector('#export-status').textContent==='Could not export MP3. Please try again.');
+  assert.ok(await page.evaluate(()=>window.iosCalls.some(c=>c.command==='cancelExport')));
+  await page.evaluate(()=>{window.failExport=false;});
+  await page.locator('#save-export').click();
+  await page.waitForFunction(()=>document.querySelector('#export-status').textContent.startsWith('MP3 saved:'));
   await page.locator('#close-export').click();
   for(const lang of ['ko','ja','en']){
     await page.locator('#language').selectOption(lang);await page.locator('#open-update').click();

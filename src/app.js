@@ -6,6 +6,7 @@ import { setupExport } from './export-ui.js';
 import { setupUpdates } from './update-ui.js';
 import { setupAndroidBack } from './android-back.js';
 import { IOSAudio } from './ios-audio.js';
+import { setupTempoButton } from './tempo-buttons.js';
 
 const isAndroid = typeof window.NativeClick !== 'undefined';
 const isIOS = typeof window.IOSClick !== 'undefined';
@@ -13,6 +14,7 @@ const isNative = isAndroid || isIOS;
 if (isAndroid) document.documentElement.classList.add('android');
 if (isIOS) {
   document.documentElement.classList.add('ios');
+  document.querySelector('meta[name="viewport"]').content = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover';
   // Apple fonts do not consistently include the whole/half-note music code points.
   for (const note of ['whole','half']) {
     const symbol = document.querySelector(`[data-note="${note}"] > span`);
@@ -264,8 +266,8 @@ $('#bpm').addEventListener('change', commitTempo);
 $('#bpm').addEventListener('blur', () => { commitTempo(); renderCurrentTempo(); });
 $('#bpm').addEventListener('keydown', event => { if (event.key === 'Enter') { commitTempo(); event.currentTarget.blur(); } });
 $('#tempo-range').addEventListener('input', event => update({ bpm: event.target.value }));
-$('#decrease').addEventListener('click', event => update({ bpm: displayedTempo() - (event.shiftKey ? 10 : 1) }));
-$('#increase').addEventListener('click', event => update({ bpm: displayedTempo() + (event.shiftKey ? 10 : 1) }));
+setupTempoButton($('#decrease'), step => update({ bpm: displayedTempo() - step }));
+setupTempoButton($('#increase'), step => update({ bpm: displayedTempo() + step }));
 $('#tap').addEventListener('click', tap);
 $('#play').addEventListener('click', togglePlayback);
 $('#reset').addEventListener('click', reset);

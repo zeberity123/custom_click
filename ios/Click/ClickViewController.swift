@@ -3,7 +3,7 @@ import WebKit
 import AVFoundation
 import MediaPlayer
 
-final class ClickViewController: UIViewController, WKNavigationDelegate, WKScriptMessageHandlerWithReply, UIDocumentPickerDelegate, UIAdaptivePresentationControllerDelegate {
+final class ClickViewController: UIViewController, WKNavigationDelegate, WKScriptMessageHandlerWithReply {
     private var web: WKWebView!
     private var server: AssetServer!
     private var origin: URL?
@@ -14,7 +14,6 @@ final class ClickViewController: UIViewController, WKNavigationDelegate, WKScrip
     private var exportURL: URL?
     private var exportHandle: FileHandle?
     private var exportBytes = 0
-    private var exportReply: ((Any?, String?) -> Void)?
     private var outputActive = false
     private var lastAudioUse = Date.distantPast
     override var preferredStatusBarStyle: UIStatusBarStyle { .lightContent }
@@ -36,6 +35,7 @@ final class ClickViewController: UIViewController, WKNavigationDelegate, WKScrip
         content.addUserScript(WKUserScript(source: bootstrap, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let settings = WKWebViewConfiguration(); settings.userContentController = content
         settings.allowsInlineMediaPlayback = true
+        settings.ignoresViewportScaleLimits = false
         web = WKWebView(frame: .zero, configuration: settings)
         web.isOpaque = false; web.backgroundColor = view.backgroundColor
         web.scrollView.backgroundColor = view.backgroundColor
@@ -170,42 +170,43 @@ final class ClickViewController: UIViewController, WKNavigationDelegate, WKScrip
                 if let language = payload["language"] as? String, ["en","ko","ja"].contains(language) { UserDefaults.standard.set(language,forKey:"click-language") }; reply(true,nil)
             case "releasePage": UIApplication.shared.open(URL(string:"https://github.com/zeberity123/custom_click/releases")!); reply(true,nil)
             case "beginExport":
-                guard exportReply == nil else { reply(false,nil);return }
                 cancelExport()
                 let url = FileManager.default.temporaryDirectory.appendingPathComponent("Click-\(UUID().uuidString).mp3")
-                FileManager.default.createFile(atPath:url.path,contents:nil);exportURL = url
+                guard FileManager.default.createFile(atPath:url.path,contents:nil) else { reply(false,nil);return }
+                exportURL = url
                 exportHandle = try FileHandle(forWritingTo:url); reply(true,nil)
             case "appendExport":
                 guard let handle = exportHandle, let base64 = payload["data"] as? String, base64.count <= 45000, let bytes = Data(base64Encoded:base64), exportBytes + bytes.count <= 90000000 else { cancelExport();reply(false,nil);return }
                 try handle.write(contentsOf:bytes); exportBytes += bytes.count;reply(true,nil)
             case "cancelExport": cancelExport();reply(true,nil)
             case "finishExport":
-                guard let url = exportURL, exportBytes > 0, presentedViewController == nil else { reply(nil,"Could not save MP3");return }
+                guard let url = exportURL, exportBytes > 0 else { reply(nil,"Could not save MP3");return }
                 try exportHandle?.close(); exportHandle = nil
-                let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString,isDirectory:true)
+                // Save durably before reporting success. Files exposes Documents via Info.plist.
+                let documents = try FileManager.default.url(for:.documentDirectory,in:.userDomainMask,appropriateFor:nil,create:true)
+                let folder = documents.appendingPathComponent("Exports",isDirectory:true)
                 try FileManager.default.createDirectory(at:folder,withIntermediateDirectories:true)
                 let name = payload["filename"] as? String ?? "Click.mp3"
                 let safeName = name.range(of:"^Click-[0-9]{1,3}bpm\\.mp3$",options:.regularExpression) == nil ? "Click.mp3" : name
-                let destination = folder.appendingPathComponent(safeName)
-                try FileManager.default.moveItem(at:url,to:destination);exportURL = destination;exportReply = reply
-                let picker = UIDocumentPickerViewController(forExporting:[destination],asCopy:true)
-                picker.delegate = self;present(picker,animated:true)
-                picker.presentationController?.delegate = self
+                var destination = folder.appendingPathComponent(safeName)
+                var suffix = 2
+                while FileManager.default.fileExists(atPath:destination.path) {
+                    destination = folder.appendingPathComponent("\(String(safeName.dropLast(4))) (\(suffix)).mp3")
+                    suffix += 1
+                }
+                try FileManager.default.moveItem(at:url,to:destination)
+                exportURL = nil; exportBytes = 0
+                reply(["saved":true,"filename":destination.lastPathComponent,"device":UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"],nil)
             default: reply(nil,"Unknown request")
             }
-        } catch { reply(nil,error.localizedDescription) }
+        } catch {
+            if ["beginExport","appendExport","finishExport"].contains(method) { cancelExport() }
+            reply(nil,error.localizedDescription)
+        }
     }
     private func cancelExport() {
         try? exportHandle?.close();exportHandle = nil
         if let url = exportURL { try? FileManager.default.removeItem(at:url) }
         exportURL = nil; exportBytes = 0
-    }
-    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) { finishExportReply(!urls.isEmpty) }
-    func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) { finishExportReply(false) }
-    func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
-        if exportReply != nil { finishExportReply(false) }
-    }
-    private func finishExportReply(_ saved: Bool) {
-        let reply = exportReply;exportReply = nil;cancelExport();reply?(["saved":saved],nil)
     }
 }

@@ -33,7 +33,7 @@ jobs:
           CLICK_TEST_DEVICE: ${{ inputs.device || 'all' }}
         run: |
           python3 - <<'PY'
-          import json, subprocess, os
+          import json, subprocess, os, pathlib
           devices=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','-j']))['devices']
           available=[d for runtime,items in devices.items() if 'iOS' in runtime for d in items]
           selected=os.environ['CLICK_TEST_DEVICE']
@@ -45,6 +45,14 @@ jobs:
             result=subprocess.run(['xcodebuild','-project','ios/Click.xcodeproj','-scheme','Click','-configuration','Debug','-parallel-testing-enabled','NO','-destination','platform=iOS Simulator,id='+device['udid'],'-derivedDataPath','ios/build/simulator','-resultBundlePath','ios/build/'+kind+'.xcresult','CODE_SIGNING_ALLOWED=NO','test'],stdout=open('ios/build/'+kind+'-test.log','w'),stderr=subprocess.STDOUT)
             subprocess.run(['xcrun','xcresulttool','export','attachments','--path','ios/build/'+kind+'.xcresult','--output-path','ios/build/screenshots/'+kind])
             subprocess.run(['xcrun','xcresulttool','get','test-results','summary','--path','ios/build/'+kind+'.xcresult'])
+            if result.returncode == 0:
+              container=subprocess.check_output(['xcrun','simctl','get_app_container',device['udid'],'com.zeberity123.customclick','data'],text=True).strip()
+              exports=list((pathlib.Path(container)/'Documents'/'Exports').glob('*.mp3'))
+              assert len(exports)>=2, f'{kind}: expected two durable MP3 exports, found {exports}'
+              for exported in exports:
+                assert exported.stat().st_size>20000, f'Empty MP3: {exported}'
+                subprocess.run(['afinfo',str(exported)],check=True)
+              print(f'{kind}: verified {len(exports)} saved MP3 files',flush=True)
             subprocess.run(['xcrun','simctl','shutdown',device['udid']])
             if result.returncode:
               print(open('ios/build/'+kind+'-test.log').read()[-18000:]);raise SystemExit(result.returncode)
