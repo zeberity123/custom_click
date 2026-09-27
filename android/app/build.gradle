@@ -8,8 +8,8 @@ android {
         applicationId 'com.zeberity123.customclick'
         minSdk 31
         targetSdk 36
-        versionCode 11
-        versionName '0.6.1'
+        versionCode 12
+        versionName '0.6.2'
         testInstrumentationRunner 'android.test.InstrumentationTestRunner'
     }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }

@@ -2,7 +2,7 @@
 
 A Windows and Android metronome built around the actual high and low clicks in your Cubase recordings, with a #39c5bb teal theme and a matching beat-dot icon.
 
-For another Windows PC, build the portable executable with `npm run package:portable`, then copy **release/portable/Custom-Click-0.5.2-win-x64.exe** and double-click it. No installer, Node.js, or separate sound files are needed on that PC. Published builds are available on [GitHub Releases](https://github.com/zeberity123/custom_click/releases). The executable extracts its bundled runtime into a temporary folder and saves preferences in your Windows user profile. The executable is unsigned.
+For another Windows PC, build the portable executable with `npm run package:portable`, then copy **release/portable/Custom-Click-0.6.2-win-x64.exe** and double-click it. No installer, Node.js, or separate sound files are needed on that PC. Published builds are available on [GitHub Releases](https://github.com/zeberity123/custom_click/releases). The executable extracts its bundled runtime into a temporary folder and saves preferences in your Windows user profile. The executable is unsigned.
 
 ## In-app updates
 
@@ -28,7 +28,7 @@ The MP3 encoder is the unmodified [lamejs 1.2.1](https://github.com/zhuker/lamej
 
 ## Android testing build
 
-The Android port has **minimum SDK 31 (Android 12)** and **target/compile SDK 36 (Android 16)**, with no maximum SDK limit. It is intended to run on Android 12 and newer versions. The sideloadable test APK is **release/android/Custom-Click-0.5.2-android.apk** after building.
+The Android port has **minimum SDK 31 (Android 12)** and **target/compile SDK 36 (Android 16)**, with no maximum SDK limit. It is intended to run on Android 12 and newer versions. The sideloadable test APK is **release/android/Custom-Click-0.6.2-android.apk** after building.
 
 Copy that APK to your phone, open it, and allow installation from the app you use to open the file when Android asks. This is a debug-signed test build (`com.zeberity123.customclick.debug`), not a Play Store release. On Android 13+, allow notifications to get the playback notification and Pause control.
 
