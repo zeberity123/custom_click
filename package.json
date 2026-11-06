@@ -17,6 +17,7 @@
     "test:desktop": "node scripts/smoke.mjs",
     "test:features": "node scripts/test-features.mjs",
     "test:presets": "node scripts/test-presets.mjs",
+    "test:ipad-fit": "node scripts/test-ipad-fit.mjs",
     "package": "node scripts/package.mjs",
     "package:portable": "electron-builder --config electron-builder.json --win portable --x64 --publish never",
     "test:portable": "node scripts/smoke.mjs --portable",

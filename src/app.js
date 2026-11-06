@@ -129,6 +129,8 @@ if (isNative) {
 }
 
 function showError(message) { $('#error').textContent = t(message); $('#error').hidden = false; }
+// Tap the banner to dismiss it (it floats over the header on short landscape screens).
+$('#error').addEventListener('click', () => { $('#error').hidden = true; });
 function persist() {
   try { localStorage.setItem(storageKey, JSON.stringify(config)); } catch { /* Ephemeral sessions can still play. */ }
   if (isIOS) void window.IOSClick.call('saveSettings', { settings: config }).catch(() => {});
