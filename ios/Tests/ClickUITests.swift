@@ -13,7 +13,8 @@ final class ClickUITests: XCTestCase {
         let stop = app.buttons["Stop"].firstMatch
         XCTAssertTrue(stop.waitForExistence(timeout: 10),app.debugDescription)
         // A preset while playing goes through the native tempo queue and keeps playback running.
-        app.buttons["Preset 2: 150 BPM"].firstMatch.tap()
+        // aria-pressed presets are exposed by WebKit as toggles (XCUI switches).
+        app.switches["Preset 2: 150 BPM"].firstMatch.tap()
         let tempoField = app.textFields["Tempo in beats per minute"].firstMatch
         let switched = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == '150'"), object: tempoField)
         XCTAssertEqual(XCTWaiter.wait(for: [switched], timeout: 10), .completed, app.debugDescription)
@@ -79,14 +80,15 @@ final class ClickUITests: XCTestCase {
         let app = XCUIApplication(); app.launch()
         let tempo = app.textFields["Tempo in beats per minute"].firstMatch
         XCTAssertTrue(tempo.waitForExistence(timeout:30))
-        let preset = app.buttons["Preset 3: 175 BPM"].firstMatch
+        // aria-pressed presets are exposed by WebKit as toggles (XCUI switches).
+        let preset = app.switches["Preset 3: 175 BPM"].firstMatch
         XCTAssertTrue(preset.waitForExistence(timeout:10), app.debugDescription)
         preset.tap()
         XCTAssertEqual(tempo.value as? String, "175")
         app.buttons["Delete selected preset"].firstMatch.tap()
         XCTAssertTrue(preset.waitForNonExistence(timeout:5), app.debugDescription)
         app.buttons["Add current BPM as a preset"].firstMatch.tap()
-        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label ENDSWITH ': 175 BPM'")).firstMatch.waitForExistence(timeout:5), app.debugDescription)
+        XCTAssertTrue(app.switches.matching(NSPredicate(format: "label ENDSWITH ': 175 BPM'")).firstMatch.waitForExistence(timeout:5), app.debugDescription)
         let shot = XCTAttachment(screenshot: app.screenshot()); shot.lifetime = .keepAlways; add(shot)
     }
 }
