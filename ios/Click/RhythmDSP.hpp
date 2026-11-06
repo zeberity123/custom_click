@@ -30,7 +30,8 @@ struct RhythmConfig {
     int delta=5, every=4;
 };
 struct RhythmEvent { int beat=0; int64_t bar=1; int bpm=126; bool beatStart=false, click=false, high=false; };
-struct RhythmCommand { int type=0; RhythmConfig config; bool high=false; }; // config/start/pause/reset/preview
+struct RhythmCommand { int type=0; RhythmConfig config; bool high=false; int bpm=0; bool atBar=false; int bars=0; }; // config/start/pause/reset/preview/tempo
+constexpr int kMinBpm=10, kMaxBpm=250;
 class RhythmDSP {
     struct Voice { int index=-1; bool high=false; };
     std::array<Voice,32> voices{};
@@ -38,31 +39,59 @@ class RhythmDSP {
     RhythmConfig config;
     double rate, remaining=0;
     int64_t tick=0, elapsed=0, steps=0;
-    int bpm=126;
+    // base: user tempo moved by presets/ramps; bpm: base plus automation steps (fractional during ramps).
+    double base=126, bpm=126;
+    bool ramping=false;
+    double rampFrom=0, rampTo=0;
+    int64_t rampStart=0, rampLength=0;
     bool running=false;
     float gain=.65f*.65f, pan=0;
     void clearVoices() { for(auto &v:voices) v.index=-1; }
-    void resetClock() { tick=elapsed=steps=0; remaining=0; bpm=config.bpm; }
+    void resetClock() { tick=elapsed=steps=0; remaining=0; ramping=false; base=bpm=config.bpm; }
+    static double clampBpm(double value) { return std::clamp(value,double(kMinBpm),double(kMaxBpm)); }
+    void retune() {
+        const double next=clampBpm(base+(config.automation?double(steps*config.delta):0.));
+        if(next==bpm) return;
+        remaining*=bpm/next; bpm=next;
+    }
     void preview(bool high) { for(auto &v:voices) if(v.index<0) { v={0,high}; break; } }
     void configure(const RhythmConfig &next) {
         bool reset=config.numerator!=next.numerator || config.denominator!=next.denominator || config.note!=next.note ||
           config.automation!=next.automation || config.seconds!=next.seconds || config.delta!=next.delta || config.every!=next.every ||
           (config.bpm!=next.bpm && (config.automation || next.automation));
-        if(!reset && config.bpm!=next.bpm) { remaining*=double(bpm)/next.bpm; bpm=next.bpm; }
+        const bool tempo=config.bpm!=next.bpm;
         config=next;
         if(reset) resetClock();
+        else if(tempo) { ramping=false; base=next.bpm; retune(); }
+    }
+    // Preset tempo change during playback; keeps bar position and automation progress.
+    void changeTempo(int target,bool atBar,int bars) {
+        const int to=std::clamp(target,kMinBpm,kMaxBpm);
+        config.bpm=to;
+        const int64_t barTicks=int64_t(192/config.denominator)*config.numerator;
+        const int64_t length=int64_t(std::max(0,bars))*barTicks;
+        const int64_t start=atBar ? (tick+barTicks-1)/barTicks*barTicks : tick;
+        if(length==0 && start==tick) { ramping=false; base=to; retune(); return; }
+        ramping=true; rampFrom=base; rampTo=to; rampStart=start; rampLength=length;
+    }
+    void applyRamp() {
+        if(!ramping || tick<rampStart) return;
+        const double progress=rampLength==0 ? 1. : std::min(1.,double(tick-rampStart)/double(rampLength));
+        base=rampFrom+(rampTo-rampFrom)*progress;
+        if(progress>=1) { base=rampTo; ramping=false; }
+        retune();
     }
     void step(int64_t value) {
         if(value==steps) return;
         steps=value;
-        int next=int(std::clamp<int64_t>(config.bpm+steps*config.delta,10,300));
-        remaining*=double(bpm)/next; bpm=next;
+        retune();
     }
 public:
     Ring<RhythmCommand,256> commands;
     Ring<RhythmEvent,1024> events;
     std::atomic<int> currentBpm{126};
     std::atomic<bool> playing{false};
+    std::atomic<bool> inTransition{false};
     explicit RhythmDSP(double sampleRate, std::vector<float> high, std::vector<float> low):highSample(std::move(high)),lowSample(std::move(low)),rate(sampleRate) {}
     static bool isClick(int64_t t,int note) {
         const int p=int(t%48);
@@ -81,21 +110,23 @@ public:
                 case 2:running=false;clearVoices();break;
                 case 3:running=false;clearVoices();resetClock();break;
                 case 4:preview(command.high);break;
+                case 5:changeTempo(command.bpm,command.atBar,command.bars);break;
             }
         }
         const int beatTicks=192/config.denominator, barTicks=beatTicks*config.numerator;
         const double smoothing=1-std::exp(-1/(rate*.01));
         for(unsigned i=0;i<count;i++) {
-            int previousBpm=bpm;
+            const long previousBpm=std::lround(bpm);
             if(running && config.automation && config.seconds) step(int64_t(elapsed/(config.every*rate)));
             if(running && remaining<=1e-8) {
                 if(config.automation && !config.seconds) step(tick/(int64_t(barTicks)*config.every));
+                applyRamp();
                 int pos=int(tick%barTicks), beat=pos/beatTicks;
                 bool beatStart=pos%beatTicks==0, click=isClick(tick,config.note), high=beatStart && config.accents[beat];
                 if(click) preview(high);
-                if(beatStart || click || previousBpm!=bpm) events.push({beat,tick/barTicks+1,bpm,beatStart,click,high});
+                if(beatStart || click || previousBpm!=std::lround(bpm)) events.push({beat,tick/barTicks+1,int(std::lround(bpm)),beatStart,click,high});
                 tick++; remaining+=rate*60/(bpm*48);
-            } else if(previousBpm!=bpm) events.push({0,tick/barTicks+1,bpm,false,false,false});
+            } else if(previousBpm!=std::lround(bpm)) events.push({0,tick/barTicks+1,int(std::lround(bpm)),false,false,false});
             if(running) { remaining--;elapsed++; }
             float sample=0;
             for(auto &v:voices) if(v.index>=0) {
@@ -108,7 +139,8 @@ public:
             const double angle=(pan+1)*3.141592653589793/4;
             left[i]=sample*gain*std::cos(angle);right[i]=sample*gain*std::sin(angle);
         }
-        currentBpm.store(bpm,std::memory_order_relaxed);
+        currentBpm.store(int(std::lround(bpm)),std::memory_order_relaxed);
+        inTransition.store(ramping,std::memory_order_relaxed);
         playing.store(running,std::memory_order_relaxed);
     }
 };

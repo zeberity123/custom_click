@@ -32,7 +32,10 @@ export class NativeAudio {
     await this.loading;
   }
   configure(config) { window.NativeClick.configure(JSON.stringify(config)); }
-  send(type, extra = {}) { window.NativeClick.command(type, extra.high === true); }
+  send(type, extra = {}) {
+    if (type === 'tempo') window.NativeClick.tempo(extra.bpm, extra.atBar === true, extra.bars ?? 0);
+    else window.NativeClick.command(type, extra.high === true);
+  }
   audibleTime() { return window.NativeClick.clock(); }
   snapshot() { return JSON.parse(window.NativeClick.snapshot()); }
 }

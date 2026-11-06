@@ -40,7 +40,7 @@
 - (BOOL)configure:(NSDictionary *)json {
     if(!_dsp) return NO;
     RhythmConfig c;
-    c.bpm=std::clamp([json[@"bpm"] intValue],10,300);
+    c.bpm=std::clamp([json[@"bpm"] intValue],kMinBpm,kMaxBpm);
     c.numerator=std::clamp([json[@"numerator"] intValue],1,12);
     int d=[json[@"denominator"] intValue];c.denominator=(d==2||d==8||d==16)?d:4;
     NSArray *notes=@[@"whole",@"half",@"quarter",@"eighth",@"sixteenth",@"triplet",@"triplet-skip",@"sixteenth-skip"];
@@ -58,6 +58,14 @@
     NSArray *names=@[@"config",@"start",@"pause",@"reset",@"preview"];
     NSUInteger index=[names indexOfObject:type];if(index==NSNotFound||index==0) return NO;
     RhythmCommand command;command.type=(int)index;command.high=high;return _dsp->commands.push(command);
+}
+- (BOOL)tempo:(int)bpm atBar:(BOOL)atBar bars:(int)bars {
+    if(!_dsp) return NO;
+    RhythmCommand command;command.type=5;command.bpm=std::clamp(bpm,kMinBpm,kMaxBpm);command.atBar=atBar;command.bars=std::clamp(bars,0,64);
+    if(!_dsp->commands.push(command)) return NO;
+    // Keep the snapshot's set tempo in step so a following configure with the same bpm is a no-op.
+    NSMutableDictionary *next=[(_config?:@{}) mutableCopy];next[@"bpm"]=@(command.bpm);_config=[next copy];
+    return YES;
 }
 - (NSDictionary *)snapshot {
     return @{ @"config":_config?:@{}, @"currentBpm":@(_dsp?_dsp->currentBpm.load():126), @"playing":@(_dsp && _dsp->playing.load()) };

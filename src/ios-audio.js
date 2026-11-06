@@ -15,7 +15,10 @@ export class IOSAudio {
     });
   }
   configure(config) { this.enqueue('configure', { config }); }
-  send(type, extra = {}) { this.enqueue('command', { type, high: extra.high === true }); }
+  send(type, extra = {}) {
+    if (type === 'tempo') this.enqueue('tempo', { bpm: extra.bpm, atBar: extra.atBar === true, bars: extra.bars ?? 0 });
+    else this.enqueue('command', { type, high: extra.high === true });
+  }
   audibleTime() { return performance.now() / 1000; }
   snapshot() { return this.state; }
 }

@@ -51,17 +51,18 @@ try {
   assert.equal(await page.locator('#live-tempo').textContent(),'Start tempo: 125 BPM');
   await page.locator('#bpm').fill('120'); await page.locator('#bpm').press('Enter');
   await page.waitForFunction(()=>document.querySelector('#bpm').value==='180');
+  // Stop rewinds automation to the starting tempo; there is no Resume.
   await page.locator('#play').click();
   const paused=await page.locator('#bpm').inputValue();
+  assert.equal(paused,'120');
   await page.waitForTimeout(1100); assert.equal(await page.locator('#bpm').inputValue(),paused);
   await page.locator('#language').selectOption('ko');
-  assert.equal(await page.locator('#play-label').textContent(),'재생');
+  assert.equal(await page.locator('#play-label').textContent(),'시작');
   assert.equal(await page.locator('#live-tempo').textContent(),'시작 템포: 120 BPM');
   await page.locator('#language').selectOption('en');
   await page.locator('#increase').click();
   assert.equal(await page.locator('#bpm').inputValue(),String(Number(paused)+1));
   await page.locator('#bpm').fill('120'); await page.locator('#bpm').press('Enter');
-  await page.locator('#reset').click();
   assert.equal(await page.locator('#bpm').inputValue(),'120');
   assert.ok((await page.locator('#automation-status').textContent()).includes('120 BPM'));
   await page.locator('#automation-unit').selectOption('bars');
@@ -110,7 +111,7 @@ try {
     for (const viewport of [{width:320,height:568},{width:390,height:760}]) {
       await page.setViewportSize(viewport);
       await page.waitForFunction(()=>document.documentElement.classList.contains('mobile'));
-      for (const selector of ['#play','#reset','#language','#open-export']) {
+      for (const selector of ['#play','#tap','#language','#open-export']) {
         const box=await page.locator(selector).boundingBox();
         assert.ok(box && box.x>=0 && box.y>=0 && box.x+box.width<=viewport.width && box.y+box.height<=viewport.height,`${lang} ${selector}: ${JSON.stringify(box)}`);
       }
@@ -124,5 +125,5 @@ try {
     await page.locator('#settings-drawer').waitFor({state:'hidden'});
   }
   assert.deepEqual(errors,[]);
-  console.log('PASS: all three languages and persistence, automation progression/pause/reset, offline MP3 export decoded with automated duration and stereo pan, and mobile controls.');
+  console.log('PASS: all three languages and persistence, automation progression/stop-rewind, offline MP3 export decoded with automated duration and stereo pan, and mobile controls.');
 } finally {await app.close();}

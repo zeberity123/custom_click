@@ -49,7 +49,7 @@ const phrases = [
   ['SOUND','사운드','サウンド'], ['Volume','볼륨','音量'], ['Stereo pan','스테레오 팬','ステレオパン'], ['Center','중앙','中央'], ['CENTER','중앙','中央'], ['L','왼쪽','左'], ['R','오른쪽','右'], ['Reset pan to center','팬을 중앙으로 초기화','パンを中央に戻す'],
   ['play / pause','재생 / 일시정지','再生 / 一時停止'], ['tap','탭','タップ'], ['tempo','템포','テンポ'],
   ['AUTOMATION','템포 자동 변경','テンポ自動変更'], ['Enable tempo automation','템포 자동 변경 켜기','テンポ自動変更を有効にする'], ['Change tempo','템포 변경','テンポ変更'], ['Tempo direction','템포 변경 방향','テンポ変更方向'], ['Add','증가','上げる'], ['Subtract','감소','下げる'], ['Every','간격','間隔'], ['Unit','단위','単位'], ['Bars','마디','小節'], ['Seconds','초','秒'],
-  ['Starts at the tempo above. Pause holds progress; Reset starts over. Tempo stays within 10–300 BPM.','위 템포에서 시작합니다. 일시정지 시 진행이 유지되고, 초기화하면 처음부터 시작합니다. 범위: 10–300 BPM.','上のテンポから開始します。一時停止で進行を保持し、リセットで最初に戻ります。範囲：10–300 BPM。'],
+  ['Starts at the tempo above. Pause holds progress; Reset starts over. Tempo stays within 10–250 BPM.','위 템포에서 시작합니다. 일시정지 시 진행이 유지되고, 초기화하면 처음부터 시작합니다. 범위: 10–250 BPM.','上のテンポから開始します。一時停止で進行を保持し、リセットで最初に戻ります。範囲：10–250 BPM。'],
   ['Close export','내보내기 닫기','書き出しを閉じる'], ['Export from bar one, including rhythm, volume, stereo pan, and enabled automation.','첫 마디부터 리듬, 볼륨, 스테레오 팬과 활성화된 템포 자동 변경을 포함하여 내보냅니다.','1小節目から、リズム・音量・パンと有効なテンポ自動変更を含めて書き出します。'],
   ['Length','길이','長さ'], ['Up to 60 minutes. MP3 · 192 kbps · stereo.','최대 60분. MP3 · 192 kbps · 스테레오.','最大60分。MP3 · 192 kbps · ステレオ。'], ['Cancel','취소','キャンセル'], ['Save MP3','MP3 저장','MP3 を保存'],
   ['Keep tapping…','계속 탭하세요…','タップを続けてください…'], ['Audio was interrupted. Press Resume to continue.','오디오가 중단되었습니다. 재개를 눌러 계속하세요.','音声が中断されました。再開を押してください。'],
@@ -61,6 +61,13 @@ const phrases = [
   ['Beat {beat}: {pitch} pitch. Click to switch.','{beat}박: {pitch}. 누르면 변경됩니다.','{beat}拍目：{pitch}。押すと切り替わります。'],
   ['Exporting… {progress}%','내보내는 중… {progress}%','書き出し中… {progress}%'], ['Choose where to save the MP3.','MP3를 저장할 위치를 선택하세요.','MP3 の保存先を選んでください。'], ['MP3 saved.','MP3를 저장했습니다.','MP3 を保存しました。'], ['Export cancelled.','내보내기를 취소했습니다.','書き出しをキャンセルしました。'],
   ['exportInvalid','1~10000 사이의 정수를 입력하세요.','1～10000の整数を入力してください。'], ['exportLimit','내보내기 길이는 60분 이하여야 합니다.','書き出しの長さは60分以内にしてください。'], ['exportFailed','MP3 내보내기에 실패했습니다. 다시 시도하세요.','MP3 の書き出しに失敗しました。もう一度お試しください。'], ['sampleError','클릭 사운드를 불러올 수 없습니다.','クリック音を読み込めません。'],
+  ['BPM PRESETS','BPM 프리셋','BPM プリセット'], ['BPM presets','BPM 프리셋','BPM プリセット'],
+  ['Delete selected preset','선택한 프리셋 삭제','選択したプリセットを削除'], ['Add current BPM as a preset','현재 BPM을 프리셋에 추가','現在のBPMをプリセットに追加'],
+  ['Change after this bar','마디 끝난 후 변경','小節の終わりで変更'], ['Gradual change','서서히 변경','徐々に変更'], ['bars','마디','小節'],
+  ['Bars for gradual change','서서히 변경할 마디 수','徐々に変更する小節数'], ['Empty preset slot','빈 프리셋','空きプリセット'],
+  ['Preset {index}: {bpm} BPM','프리셋 {index}: {bpm} BPM','プリセット {index}：{bpm} BPM'], ['→ {bpm} BPM','→ {bpm} BPM','→ {bpm} BPM'],
+  ['Stop','정지','停止'], ['Audio was interrupted. Press Start to continue.','오디오가 중단되었습니다. 시작을 눌러 다시 재생하세요.','音声が中断されました。開始を押してください。'],
+  ['Audio focus lost. Tap Start when you are ready.','다른 앱이 오디오를 사용하고 있습니다. 준비되면 시작을 누르세요.','他のアプリが音声を使用しています。準備ができたら開始を押してください。'],
   ['Could not start audio: {error}','오디오를 시작할 수 없습니다: {error}','音声を開始できません：{error}'], ['Could not preview click: {error}','클릭을 미리 들을 수 없습니다: {error}','クリック音を試聴できません：{error}'],
 ];
 const englishErrors = { exportInvalid:'Enter a whole number from 1 to 10000.', exportLimit:'The export must be 60 minutes or shorter.', exportFailed:'Could not export MP3. Please try again.', sampleError:'Could not load click samples.' };

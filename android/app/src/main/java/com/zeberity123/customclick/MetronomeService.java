@@ -24,7 +24,7 @@ public final class MetronomeService extends Service {
     private final Object signal = new Object();
     private volatile AudioTrack track;
     private int notifiedBpm = -1;
-    private final BroadcastReceiver noisy = new BroadcastReceiver() { public void onReceive(Context c, Intent intent) { pause(); } };
+    private final BroadcastReceiver noisy = new BroadcastReceiver() { public void onReceive(Context c, Intent intent) { reset(); } };
     public final class LocalBinder extends Binder { public MetronomeService getService() { return MetronomeService.this; } }
     @Override public IBinder onBind(Intent intent) { return binder; }
     @Override public void onCreate() {
@@ -35,7 +35,7 @@ public final class MetronomeService extends Service {
         session = new MediaSession(this, "Custom Click");
         session.setCallback(new MediaSession.Callback() {
             @Override public void onPlay() { startForegroundService(new Intent(MetronomeService.this, MetronomeService.class).setAction(PLAY)); }
-            @Override public void onPause() { pause(); }
+            @Override public void onPause() { reset(); }
             @Override public void onStop() { reset(); }
         });
         IntentFilter filter = new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
@@ -94,6 +94,11 @@ public final class MetronomeService extends Service {
             main.post(() -> { if (foreground) getSystemService(NotificationManager.class).notify(NOTIFICATION, notification()); });
         } catch (JSONException failure) { error = "Invalid metronome settings."; }
     }
+    public void changeTempo(int bpm, boolean atBar, int bars) {
+        if (engine == null) return;
+        engine.changeTempo(bpm, atBar, bars);
+        getSharedPreferences("audio",0).edit().putString("config", configJson().toString()).apply();
+    }
     private JSONObject configJson() {
         JSONObject json = new JSONObject();
         if (engine == null) return json;
@@ -129,7 +134,7 @@ public final class MetronomeService extends Service {
                 if (!wake.isHeld()) wake.acquire();
                 engine.start(); wakeWorker(); session.setActive(true); updateMediaState(true); emitState("");
             }
-        } else if (PAUSE.equals(action)) pause(); else reset();
+        } else reset();
         return START_NOT_STICKY;
     }
     public void pause() {
@@ -149,7 +154,7 @@ public final class MetronomeService extends Service {
         PendingIntent pause = PendingIntent.getService(this,1,new Intent(this,MetronomeService.class).setAction(PAUSE),PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         int bpm = engine == null ? RhythmEngine.DEFAULT_BPM : engine.currentBpm();
         return new Notification.Builder(this,CHANNEL).setSmallIcon(R.drawable.ic_notification).setColor(0xff39c5bb).setContentTitle("Click · " + bpm + " BPM").setContentText(text("Metronome is playing","메트로놈 재생 중","メトロノーム再生中")).setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true)
-            .addAction(new Notification.Action.Builder(android.R.drawable.ic_media_pause,text("Pause","일시정지","一時停止"),pause).build())
+            .addAction(new Notification.Action.Builder(android.R.drawable.ic_media_pause,text("Stop","정지","停止"),pause).build())
             .setStyle(new Notification.MediaStyle().setMediaSession(session.getSessionToken()).setShowActionsInCompactView(0)).build();
     }
     private void beatEvent(long frame, int beat, long bar, boolean beatStart, boolean click, boolean high) {
@@ -166,7 +171,7 @@ public final class MetronomeService extends Service {
             else time += Math.max(0, frame - (output.getPlaybackHeadPosition() & 0xffffffffL)) / (double)RhythmEngine.RATE;
         }
         JSONObject event = new JSONObject();
-        try { event.put("bpm",engine.currentBpm()).put("time",time).put("beat",beat).put("bar",bar).put("beatStart",beatStart).put("click",click).put("high",high); } catch(JSONException ignored) { }
+        try { event.put("bpm",engine.currentBpm()).put("time",time).put("beat",beat).put("bar",bar).put("beatStart",beatStart).put("click",click).put("high",high).put("ramping",engine.isRamping()); } catch(JSONException ignored) { }
         MainActivity.emit("native-click",event);
     }
     private void audioLoop() {

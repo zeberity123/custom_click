@@ -24,14 +24,20 @@
           <div class="panel-top"><span class="section-label">TEMPO</span><span id="tempo-name" class="tempo-name">ALLEGRO</span></div>
           <div class="tempo-control">
             <button class="step-button" id="decrease" aria-label="Decrease tempo">−</button>
-            <div class="tempo-number"><input id="bpm" type="number" min="10" max="300" step="1" value="126" aria-label="Tempo in beats per minute"><span id="tempo-caption">BEATS PER MINUTE</span><span id="live-tempo" hidden></span></div>
+            <div class="tempo-number"><input id="bpm" type="number" min="10" max="250" step="1" value="126" aria-label="Tempo in beats per minute"><span id="tempo-caption">BEATS PER MINUTE</span><span id="live-tempo" hidden></span><span id="tempo-target" hidden></span></div>
             <button class="step-button" id="increase" aria-label="Increase tempo">+</button>
           </div>
-          <div class="tempo-slider"><input id="tempo-range" type="range" min="10" max="300" value="126" aria-label="Tempo"><div class="range-endpoints"><span>10 BPM</span><span>300 BPM</span></div></div>
-          <div class="tap-row"><span>Or feel it out</span><button id="tap" class="tap-button">Tap tempo <kbd>T</kbd></button><span id="tap-hint">Tap at least twice</span><button id="drawer-handle" class="drawer-handle" aria-label="Open time signature menu" aria-controls="settings-drawer" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m14 6-6 6 6 6M20 5v14"/></svg></button></div>
-          <div class="keyboard-shortcuts"><span><kbd>SPACE</kbd> play / pause <span class="footer-divider">/</span> <kbd>T</kbd> tap <span class="footer-divider">/</span> <kbd>↑</kbd> <kbd>↓</kbd> tempo</span></div>
+          <div class="tempo-slider"><input id="tempo-range" type="range" min="10" max="250" value="126" aria-label="Tempo"><div class="range-endpoints"><span>10 BPM</span><span>250 BPM</span></div></div>
+          <section class="preset-section" aria-label="BPM presets">
+            <div class="preset-heading"><span class="section-label">BPM PRESETS</span><div class="preset-edit"><button id="preset-remove" type="button" aria-label="Delete selected preset" title="Delete selected preset">−</button><button id="preset-add" type="button" aria-label="Add current BPM as a preset" title="Add current BPM as a preset">+</button></div><button id="drawer-handle" class="drawer-handle" aria-label="Open time signature menu" aria-controls="settings-drawer" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m14 6-6 6 6 6M20 5v14"/></svg></button></div>
+            <div id="presets" class="preset-grid" role="group" aria-label="BPM presets"></div>
+            <div class="preset-options">
+              <label class="check-option"><input id="preset-at-bar" type="checkbox"><span>Change after this bar</span></label>
+              <label class="check-option"><input id="preset-gradual" type="checkbox"><span>Gradual change</span><input id="preset-bars" type="number" min="1" max="64" value="4" aria-label="Bars for gradual change"><span>bars</span></label>
+            </div>
+          </section>
           <div class="beat-section"><div class="beat-heading"><span class="section-label">BEAT PATTERN</span><span>Click a beat to switch pitch</span></div><div id="beats" class="beats" aria-label="Beat pitch controls"></div><div class="beat-legend"><span><i class="high-key"></i> High</span><span><i class="low-key"></i> Low</span><span class="beat-unit" id="beat-unit">1 beat = quarter note</span></div></div>
-          <div class="transport"><button id="reset" class="reset-button" aria-label="Reset to first beat" title="Reset to first beat (R)">↺</button><button id="play" class="play-button" disabled><span id="play-icon" aria-hidden="true">▶</span><span id="play-label">Start</span><kbd>SPACE</kbd></button></div>
+          <div class="transport"><button id="tap" class="tap-button"><span class="tap-label">Tap tempo <kbd>T</kbd></span><small id="tap-hint">Tap at least twice</small></button><button id="play" class="play-button" disabled><span id="play-icon" aria-hidden="true">▶</span><span id="play-label">Start</span><kbd>SPACE</kbd></button></div>
           <div class="transport-caption"><span id="position">BAR 01 <span>·</span> BEAT 01</span><span id="play-state"></span></div>
         </section>
         <div id="drawer-backdrop" class="drawer-backdrop" hidden></div>

@@ -137,3 +137,111 @@ html.mobile .drawer-toggle .settings-menu-icon{margin:0;padding:0;justify-self:e
   html.ios .automation-fields{grid-template-columns:repeat(4,minmax(0,1fr))}
   html.ios .automation-fields select{font-size:13px;padding-left:7px;padding-right:20px;background-position:right 6px center}
 }
+/* ── BPM presets, Tap/Start transport (0.6) ─────────────────────────── */
+.tempo-number #tempo-target{font-size:12px;color:var(--accent);letter-spacing:.5px;margin-top:8px;font-variant-numeric:tabular-nums}
+.preset-section{border-top:1px solid #303b3a;margin-top:22px;padding:18px 0 20px}
+.preset-heading{position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.preset-edit{display:flex;gap:8px}
+.preset-edit button{width:36px;height:36px;border:1px solid #3d5351;border-radius:8px;background:#22302f;color:#c8e6e4;font-size:20px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0}
+.preset-edit button:disabled{cursor:default;opacity:.35}
+#preset-remove:not(:disabled){border-color:#7a5a52;color:#f1b7a8}
+.preset-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.preset-button{position:relative;display:flex;align-items:baseline;justify-content:center;gap:5px;min-width:0;height:54px;padding:0 4px;border:1px solid #3d5351;border-radius:9px;background:#22302f;color:#d5efed;font-variant-numeric:tabular-nums}
+.preset-button strong{font-size:22px;font-weight:650;letter-spacing:-.5px;line-height:54px}
+.preset-button small{font-size:8px;letter-spacing:1px;color:#83a09e}
+.preset-button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#143532}
+.preset-button[aria-pressed=true] small{color:#2c5f5b}
+.preset-button.pending{background:#2a4543;border-color:var(--accent);color:#b6efeb;animation:preset-pending 1s ease-in-out infinite alternate}
+.preset-button.pending small{color:#83a09e}
+@keyframes preset-pending{from{box-shadow:0 0 0 0 #39c5bb00}to{box-shadow:0 0 0 3px #39c5bb55}}
+.preset-button.empty{background:transparent;border:1px dashed #2f3c3b;cursor:default;opacity:1}
+.preset-button.empty small{display:none}
+.preset-options{display:flex;flex-wrap:wrap;align-items:center;gap:8px 22px;margin-top:14px;font-size:11px;color:#b9cdcb}
+.check-option{display:flex;align-items:center;gap:8px;cursor:pointer;min-height:32px}
+.check-option input[type=checkbox]{width:18px;height:18px;margin:0;accent-color:var(--accent);cursor:pointer}
+.check-option input[type=number]{width:52px;background:#222b2a;color:#cededd;border:1px solid #394847;border-radius:6px;padding:6px 4px;text-align:center;font:inherit}
+.check-option input[type=number]:disabled{opacity:.45}
+.beat-section{border-top:1px solid #303b3a;padding-top:18px}
+.transport{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:11px;margin-top:22px}
+.transport .tap-button{height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0 8px;border-radius:8px;font-size:13px;font-weight:600;min-width:0}
+.transport .tap-button kbd{margin-left:6px}
+.transport .tap-button small{font-size:9px;font-weight:400;color:#83a09e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.transport .play-button{height:52px}
+.play-button.playing{background:#2a4543;color:#b6efeb;border:1px solid var(--accent)}
+.play-button.playing kbd{border-color:#3d5351;color:#83a09e}
+.play-button #play-icon{font-size:13px}
+html.mobile .preset-section{margin-top:14px;padding:14px 0 16px}
+html.mobile .preset-edit button{width:44px;height:40px}
+html.mobile .preset-button{height:52px}
+html.mobile .preset-options{font-size:12px;gap:4px 18px}
+html.mobile .check-option{min-height:40px}
+html.mobile .check-option input[type=checkbox]{width:22px;height:22px}
+html.mobile .transport{display:grid}
+html.mobile .transport .tap-button,html.mobile .transport .play-button{height:56px}
+html.mobile .drawer-handle{right:-32px}
+html.mobile .preset-edit{margin-right:16px}
+/* Touch tablets (iPad 11" landscape 1194×834 and similar): bigger targets, no keyboard hints. */
+@media(pointer:coarse){
+  kbd{display:none!important}
+  .preset-edit button{width:46px;height:42px;font-size:22px}
+  .preset-button{height:60px}.preset-button strong{font-size:25px;line-height:60px}
+  .check-option{min-height:44px;font-size:13px}.check-option input[type=checkbox]{width:24px;height:24px}
+  .check-option input[type=number]{width:60px;padding:9px 4px}
+  .transport .tap-button,.transport .play-button{height:62px;font-size:15px}
+  .transport .tap-button small{font-size:11px}
+  .step-button{width:48px;height:48px}
+  input[type=range]{height:34px}
+  input[type=range]::-webkit-slider-thumb{width:22px;height:22px;margin-top:-9px}
+  .header-button,#language{min-height:44px}
+}
+/* Short landscape windows (iPad landscape, laptops): keep everything on one screen. */
+@media(min-width:651px) and (max-height:900px){
+  main{padding-top:14px}
+  .metronome{padding:18px 26px}
+  .tempo-control{margin:8px 0 6px}
+  .tempo-number input{font-size:96px}
+  .preset-section{margin-top:14px;padding:14px 0 14px}
+  .preset-heading{margin-bottom:10px}
+  .preset-options{margin-top:10px}
+  .beat-section{padding-top:14px}
+  .beats{padding:14px 0 12px}
+  .transport{margin-top:16px}
+  .transport-caption{margin-top:12px}
+}
+@media(min-width:651px) and (max-height:760px){
+  .app-header{height:54px}main{padding-top:10px}
+  .metronome{padding:14px 24px}
+  .tempo-number input{font-size:76px}
+  .preset-section{margin-top:10px;padding:10px 0}
+  .beat-section{padding-top:10px}
+  .transport{margin-top:10px}.transport-caption{margin-top:8px}
+  .preset-button{height:48px}.preset-button strong{font-size:20px;line-height:48px}
+  .beat-orb{width:44px;height:44px}
+  .beats{padding:10px 0 8px}
+}
+@media(pointer:coarse) and (min-width:651px) and (max-height:900px){
+  .app-header{height:58px}main{padding-top:10px}
+  .metronome{padding:14px 24px}
+  .tempo-control{margin:4px 0 2px}
+  .tempo-number input{font-size:86px}
+  .preset-section{margin-top:8px;padding:10px 0 10px}
+  .preset-heading{margin-bottom:8px}
+  .preset-button{height:54px}.preset-button strong{line-height:54px}
+  .preset-options{margin-top:6px}
+  .beat-section{padding-top:10px}
+  .beats{padding:10px 0 8px}
+  .transport{margin-top:10px}
+  .transport .tap-button,.transport .play-button{height:58px}
+  .transport-caption{margin-top:8px}
+}
+/* iPad landscape usable height (~786 px): trim the settings column so neither column scrolls. */
+@media(pointer:coarse) and (min-width:651px) and (max-height:820px){
+  .settings-column{gap:10px}
+  .rhythm-panel,.sound-panel{padding:14px 20px}
+  .custom-meter{margin-top:6px}.subdivision-label{margin-top:10px}.field-label{margin-top:10px}
+  .sound-panel .panel-top{margin-bottom:8px}
+  .sound-panel input[type=range]{height:30px}
+  .pan-heading{margin-top:6px}
+  .automation{margin-top:10px;padding-top:10px}.automation-fields{margin-top:8px;gap:6px}
+  .automation-status{margin-top:8px}
+}

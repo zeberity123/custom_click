@@ -2,9 +2,21 @@
 
 A Windows and Android metronome built around the actual high and low clicks in your Cubase recordings, with a #39c5bb teal theme and a matching beat-dot icon.
 
-For another Windows PC, build the portable executable with `npm run package:portable`, then copy **release/portable/Custom-Click-0.6.3-win-x64.exe** and double-click it. No installer, Node.js, or separate sound files are needed on that PC. Published builds are available on [GitHub Releases](https://github.com/zeberity123/custom_click/releases). The executable extracts its bundled runtime into a temporary folder and saves preferences in your Windows user profile. The executable is unsigned.
+For another Windows PC, build the portable executable with `npm run package:portable`, then copy **release/portable/Custom-Click-0.7.0-win-x64.exe** and double-click it. No installer, Node.js, or separate sound files are needed on that PC. Published builds are available on [GitHub Releases](https://github.com/zeberity123/custom_click/releases). The executable extracts its bundled runtime into a temporary folder and saves preferences in your Windows user profile. The executable is unsigned.
 
-Tempo controls: tap **+** or **−** for 1 BPM, or hold for 0.4 seconds to begin changing 10 BPM every 0.25 seconds. Releasing or moving off the button stops the repeat. Tempo stays within 10–300 BPM. This works on Windows, Android, iPad and iPhone.
+Tempo controls: tap **+** or **−** for 1 BPM, or hold for 0.4 seconds to begin changing 10 BPM every 0.25 seconds. Releasing or moving off the button stops the repeat. Tempo stays within 10–250 BPM. This works on Windows, Android, iPad and iPhone.
+
+## BPM presets (0.7.0)
+
+The space below the tempo slider holds up to **8 BPM preset buttons** (4 × 2). Factory presets are 200, 150, 175 and 192 BPM.
+
+- Tap a preset to switch to that tempo. While stopped it simply sets the tempo; while playing the change is scheduled on the audio thread (desktop, Android and iOS) without resetting the bar position or automation.
+- **+** (top right) adds the main tempo number as a new preset (disabled when all 8 slots are full; an existing value is just selected). **−** deletes the selected (highlighted) preset.
+- **Change after this bar**: the new tempo starts on the next downbeat. Until then the target is shown under the tempo (`→ 200 BPM`) and the preset pulses.
+- **Gradual change [N] bars**: the tempo glides linearly to the target over N bars (1–64). Combined with *Change after this bar*, the glide starts on the next downbeat.
+- On desktop, keys **1–8** trigger presets. Presets and options are saved locally.
+
+Start/Stop has no resume: **Stop always rewinds to bar 1, beat 1**, and every Start begins from the top (lock-screen pause, interruptions and unplugged headphones also stop and rewind). Tap tempo sits where Reset used to be, at half the width of Start.
 
 ## In-app updates
 
@@ -22,7 +34,7 @@ For future GitHub releases, publish a stable `vMAJOR.MINOR.PATCH` tag with `Cust
 
 Use the language selector at the top right to switch between English, Korean, and Japanese. Your choice is saved; Android playback notifications use it too.
 
-Click **Automation: OFF** below stereo pan to switch it ON, choose Add or Subtract, set the BPM change, and choose the interval in completed bars or elapsed playback seconds. Automation starts OFF in a new session. The large tempo number and slider follow the current tempo; the smaller line shows the starting tempo. Editing the number, slider, or +/− controls sets a new starting tempo. Tempo stays between 10 and 300 BPM. Pause preserves progress. Reset or changing the tempo, rhythm, or automation settings restarts the automation; changing volume or pan preserves it. Automation also runs during Android background playback, retaining its state when you return to the running session.
+Click **Automation: OFF** below stereo pan to switch it ON, choose Add or Subtract, set the BPM change, and choose the interval in completed bars or elapsed playback seconds. Automation starts OFF in a new session. The large tempo number and slider follow the current tempo; the smaller line shows the starting tempo. Editing the number, slider, or +/− controls sets a new starting tempo. Tempo stays between 10 and 250 BPM. Stop rewinds automation; changing the tempo, rhythm, or automation settings restarts the automation; changing volume or pan preserves it. Automation also runs during Android background playback, retaining its state when you return to the running session.
 
 **Export MP3** sits to the left of the language selector. Choose a whole-number length in bars or seconds. Export always starts at bar one and the starting tempo, with the current rhythm, accents, volume, pan, and enabled automation. The output is a stereo 48 kHz, 192 kbps MP3, up to 60 minutes long. Automation determines the duration of a bar-based export. Export runs offline without interrupting playback; Cancel stops rendering. Keep the app open while exporting. Windows and Android ask where to save the file. MP3 encoder padding can add a few milliseconds beyond the requested musical duration.
 
@@ -30,7 +42,7 @@ The MP3 encoder is the unmodified [lamejs 1.2.1](https://github.com/zhuker/lamej
 
 ## Android testing build
 
-The Android port has **minimum SDK 31 (Android 12)** and **target/compile SDK 36 (Android 16)**, with no maximum SDK limit. It is intended to run on Android 12 and newer versions. The sideloadable test APK is **release/android/Custom-Click-0.6.3-android.apk** after building.
+The Android port has **minimum SDK 31 (Android 12)** and **target/compile SDK 36 (Android 16)**, with no maximum SDK limit. It is intended to run on Android 12 and newer versions. The sideloadable test APK is **release/android/Custom-Click-0.7.0-android.apk** after building.
 
 Copy that APK to your phone, open it, and allow installation from the app you use to open the file when Android asks. This is a debug-signed test build (`com.zeberity123.customclick.debug`), not a Play Store release. On Android 13+, allow notifications to get the playback notification and Pause control.
 
@@ -38,13 +50,13 @@ The Android interface shares the desktop assets and settings controls. Native `A
 
 To check audio mixing on a device, start YouTube Music and then Click, and repeat in the opposite order. Both should remain audible at their selected volumes when switching apps and locking the screen. Also check Click's Pause/Resume, paused beat previews, and headphone disconnection. Call and system-interruption behavior needs device validation; Click no longer pauses in response to audio-focus changes.
 
-Both desktop and mobile open directly on the tempo controls, without the introductory heading or reference-sample previews. Sound settings contain volume, stereo pan, and tempo automation. On mobile, Start/Pause and Reset stay at the bottom. The menu button shows the current time signature, click-division symbol and fraction, and volume percentage. Tap that button or the arrow handle beside Tap Tempo, or swipe right across the main panel, to open the right-side drawer. Swiping left also opens it. While the drawer is open, swipe right, tap outside, or use its close button to return. Android Back closes an open Update or Export MP3 dialog or the time signature drawer before leaving the app; closing an active export cancels it. Android 13+ registers its Back callback only while an overlay is open, leaving system navigation available on the main screen; Android 12 uses the legacy Back callback. The drawer contains rhythm settings, volume, stereo pan, and tempo automation. Android reserves status-bar, navigation-bar, cutout, and keyboard space around the entire WebView, following [Android's WebView inset guidance](https://developer.android.com/develop/ui/views/layout/webapps/understand-window-insets).
+Both desktop and mobile open directly on the tempo controls, without the introductory heading or reference-sample previews. Sound settings contain volume, stereo pan, and tempo automation. On mobile, Tap tempo and Start/Stop stay at the bottom. The menu button shows the current time signature, click-division symbol and fraction, and volume percentage. Tap that button or the arrow handle beside the BPM preset +/− buttons, or swipe right across the main panel, to open the right-side drawer. Swiping left also opens it. While the drawer is open, swipe right, tap outside, or use its close button to return. Android Back closes an open Update or Export MP3 dialog or the time signature drawer before leaving the app; closing an active export cancels it. Android 13+ registers its Back callback only while an overlay is open, leaving system navigation available on the main screen; Android 12 uses the legacy Back callback. The drawer contains rhythm settings, volume, stereo pan, and tempo automation. Android reserves status-bar, navigation-bar, cutout, and keyboard space around the entire WebView, following [Android's WebView inset guidance](https://developer.android.com/develop/ui/views/layout/webapps/understand-window-insets).
 
-**Validation:** the APK builds and passes Android lint with no errors; native rendered audio tests cover all divisions at 10, 176, and 300 BPM, rests, pause/reset, stereo panning, mute, and bar/second automation. Host UI tests cover all three languages, automation, MP3 encoding and the Android save bridge. The packaged Windows MP3 is decoded to verify automated duration and stereo output. No physical Android device or emulator was available; Android’s system file picker and notification language changes still need device confirmation. Check launch, click timing, lock-screen playback, notifications, interruptions and Bluetooth latency on a phone before relying on it for a performance. OS support configuration is not a claim of testing on every Android version.
+**Validation:** the APK builds and passes Android lint with no errors; native rendered audio tests cover all divisions at 10, 176, and 250 BPM, preset changes at the bar line and gradual ramps, rests, pause/reset, stereo panning, mute, and bar/second automation. Host UI tests cover all three languages, automation, MP3 encoding and the Android save bridge. The packaged Windows MP3 is decoded to verify automated duration and stereo output. No physical Android device or emulator was available; Android’s system file picker and notification language changes still need device confirmation. Check launch, click timing, lock-screen playback, notifications, interruptions and Bluetooth latency on a phone before relying on it for a performance. OS support configuration is not a claim of testing on every Android version.
 
 ### Build Android
 
-Use JDK 17, Android SDK platform 36, SDK build-tools 35.0.0 and Gradle 8.13. The Windows helper downloads tools into ignored workspace folders; setup accepts the licenses for the SDK packages it installs. The default JDK path is `C:\Program Files\Java\jdk-17`.
+Use JDK 17 (the helpers also pick up a portable JDK extracted to `.toolchains/jdk-17*`), Android SDK platform 36, SDK build-tools 35.0.0 and Gradle 8.13. The Windows helper downloads tools into ignored workspace folders; setup accepts the licenses for the SDK packages it installs. The default JDK path is `C:\Program Files\Java\jdk-17`.
 
 ```powershell
 npm run android:setup
@@ -61,16 +73,16 @@ To run from a fresh clone, follow the development setup below. You can then doub
 
 ## Controls
 
-- Tempo: **10–300 BPM**, editable number, slider, or +/− buttons. Hold Shift when clicking +/− for steps of 10.
+- Tempo: **10–250 BPM**, editable number, slider, or +/− buttons. Hold Shift when clicking +/− for steps of 10.
 - Beats / Notes: set 1–12 beats and a note denominator of 2, 4, 8, or 16.
 - Click division: whole, half, quarter, eighth, or sixteenth note, plus three quarter-note patterns: triplet (all three hits), triplet with only hits 1 and 3, and sixteenths with only hits 1 and 4. Hollow dots indicate rests. Choose one division or pattern at a time.
-- Beat dots: one per numerator beat. Click to toggle high/low pitch; when paused, the selected sound is previewed. One dot stays lit until the next beat, including while paused; Reset lights the first dot. Subdivisions between beats use the low sample.
+- Beat dots: one per numerator beat. Click to toggle high/low pitch; when stopped, the selected sound is previewed. One dot stays lit until the next beat; Stop lights the first dot. Subdivisions between beats use the low sample.
 - Tap tempo: click **Tap tempo** or press **T** at least twice. Averages the most recent six taps; resets after 6.5 seconds without a tap.
 - Volume and stereo panning: the Center label resets panning. Use headphones to hear left/right separation.
-- Space: play/pause. R: reset to the beginning. Up/Down: adjust tempo; Shift for increments of 10. Shortcuts yield to input fields.
+- Space: start/stop. 1–8: BPM presets. Up/Down: adjust tempo; Shift for increments of 10. Shortcuts yield to input fields.
 - Settings save locally between sessions. Playback never starts automatically.
 
-BPM always means **quarter notes per minute**, including in compound meters. In 6/8, six dots mark the six eighth notes; there are three quarter-note units in the bar. Tap quarter notes to set this BPM. The selected click division is independent of the visual beat pulse. Long notes and quarter-note patterns continue across bar lines without being shortened. Changing the meter or division restarts the pattern at beat one. Pause retains the musical position; reset stops and returns to beat one.
+BPM always means **quarter notes per minute**, including in compound meters. In 6/8, six dots mark the six eighth notes; there are three quarter-note units in the bar. Tap quarter notes to set this BPM. The selected click division is independent of the visual beat pulse. Long notes and quarter-note patterns continue across bar lines without being shortened. Changing the meter or division restarts the pattern at beat one. Stop always returns to bar one, beat one.
 
 Within each quarter note, the triplet plays at 0, 1/3, and 2/3; the sparse triplet plays at 0 and 2/3; the sparse sixteenths play at 0 and 3/4. Rests keep their full duration. These replace the former dotted switch; previously saved dotted settings now use their straight division, with other preferences preserved.
 
@@ -99,6 +111,7 @@ npm start
 ```powershell
 npm test            # Musical timing, PCM hashes, pause/reset, tap tempo
 npm run test:features # Automation, languages, MP3 encode/decode and save
+npm run test:presets  # BPM presets, change-after-bar, gradual change, Stop rewinds
 npm run test:desktop # Actual Electron UI, audio startup, panning, persistence
 npm run package     # Windows x64 app in release/
 npm run package:portable # Single-file Windows x64 executable in release/portable/

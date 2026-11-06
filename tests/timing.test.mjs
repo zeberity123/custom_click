@@ -53,7 +53,7 @@ test('saved dotted settings retain the straight division and other preferences',
 });
 test('invalid saved settings are sanitized; custom meter supports 1–12 beats', () => {
   const settings = sanitize({ bpm: 999, numerator: -7, denominator: 3, note: 'invalid', pan: -300, volume: 'x', accents: ['false'] });
-  assert.equal(settings.bpm, 300);
+  assert.equal(settings.bpm, 250);
   assert.equal(settings.numerator, 1);
   assert.equal(settings.denominator, 4);
   assert.equal(settings.note, 'quarter');
@@ -72,5 +72,5 @@ test('tap tempo averages intervals, rejects bounce, and resets after inactivity'
   assert.equal(tap.tap(15000), 10);
   const fast = new TapTempo();
   fast.tap(0);
-  assert.equal(fast.tap(200), 300);
+  assert.equal(fast.tap(200), 250);
 });

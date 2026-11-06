@@ -65,9 +65,9 @@ final class ClickViewController: UIViewController, WKNavigationDelegate, WKScrip
         NotificationCenter.default.addObserver(self, selector: #selector(mediaReset), name: AVAudioSession.mediaServicesWereResetNotification, object: nil)
         let remote = MPRemoteCommandCenter.shared()
         remote.playCommand.addTarget { [weak self] _ in self?.remoteCommand("start"); return .success }
-        remote.pauseCommand.addTarget { [weak self] _ in self?.remoteCommand("pause"); return .success }
+        remote.pauseCommand.addTarget { [weak self] _ in self?.remoteCommand("reset"); return .success }
         remote.togglePlayPauseCommand.addTarget { [weak self] _ in
-            DispatchQueue.main.async { guard let self else { return }; self.remoteCommand(self.playing ? "pause" : "start") };return .success
+            DispatchQueue.main.async { guard let self else { return }; self.remoteCommand(self.playing ? "reset" : "start") };return .success
         }
     }
     private func ensureAudio() throws {
@@ -118,14 +118,14 @@ final class ClickViewController: UIViewController, WKNavigationDelegate, WKScrip
         guard (notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt) == AVAudioSession.InterruptionType.began.rawValue else { return }
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            _ = self.audio.command("pause", high: false); self.playing = false
+            _ = self.audio.command("reset", high: false); self.playing = false
             UIApplication.shared.isIdleTimerDisabled = false; MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
             self.emit("native-state", self.state())
         }
     }
     @objc private func routeChanged(_ notification: Notification) {
         let reason = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt
-        if reason == AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue { remoteCommand("pause") }
+        if reason == AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue { remoteCommand("reset") }
     }
     @objc private func mediaReset() {
         DispatchQueue.main.async { [weak self] in
@@ -161,7 +161,11 @@ final class ClickViewController: UIViewController, WKNavigationDelegate, WKScrip
                 try ensureAudio()
                 guard let next = payload["config"] as? [String: Any], audio.configure(next) else { reply(nil,"Invalid settings");return }
                 config = next; reply(true,nil)
-            case "command": try command(payload["type"] as? String ?? "pause", high: payload["high"] as? Bool ?? false); reply(state(),nil)
+            case "command": try command(payload["type"] as? String ?? "reset", high: payload["high"] as? Bool ?? false); reply(state(),nil)
+            case "tempo":
+                // Same ordered queue as "configure": the tempo change lands before the matching config.
+                guard let bpm = payload["bpm"] as? Int, audio.tempo(Int32(bpm), atBar: payload["atBar"] as? Bool ?? false, bars: Int32(payload["bars"] as? Int ?? 0)) else { reply(nil,"Invalid tempo");return }
+                config["bpm"] = min(250, max(10, bpm)); reply(true,nil)
             case "saveSettings":
                 if let settings = payload["settings"], let bytes = try? JSONSerialization.data(withJSONObject: settings), bytes.count < 10000 {
                     UserDefaults.standard.set(String(data: bytes, encoding: .utf8), forKey: "click-studio-settings-v1")

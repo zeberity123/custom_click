@@ -1,6 +1,9 @@
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
-if (-not $env:JAVA_HOME) { $env:JAVA_HOME = 'C:\Program Files\Java\jdk-17' }
+if (-not $env:JAVA_HOME) {
+    $bundled = Get-ChildItem -Directory -Path (Join-Path $projectRoot '.toolchains') -Filter 'jdk-17*' -ErrorAction SilentlyContinue | Select-Object -First 1
+    $env:JAVA_HOME = if ($bundled) { $bundled.FullName } else { 'C:\Program Files\Java\jdk-17' }
+}
 if (-not $env:ANDROID_HOME) { $env:ANDROID_HOME = Join-Path $projectRoot '.android-sdk' }
 $env:GRADLE_USER_HOME = Join-Path $projectRoot '.gradle-cache'
 $gradle = Join-Path $projectRoot '.toolchains\gradle-8.13\bin\gradle.bat'

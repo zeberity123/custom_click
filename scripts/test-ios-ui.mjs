@@ -13,6 +13,7 @@ try {
       window.iosCalls.push({command,payload});
       if(command==='ready')return state;
       if(command==='configure'){state.config=payload.config;return true;}
+      if(command==='tempo'){state.config={...state.config,bpm:payload.bpm};return true;}
       if(command==='command'){
         if(payload.type!=='preview')state.playing=payload.type==='start';
         window.dispatchEvent(new CustomEvent('native-state',{detail:structuredClone(state)}));return state;
@@ -31,7 +32,7 @@ try {
   for(const size of [{width:834,height:1150},{width:1194,height:786},{width:390,height:760},{width:320,height:568}]) {
     await page.setViewportSize(size);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
-    for(const id of ['#bpm','#play','#reset'])assert.equal(await page.locator(id).isVisible(),true);
+    for(const id of ['#bpm','#play','#tap','#presets'])assert.equal(await page.locator(id).isVisible(),true);
     const playBox=await page.locator('#play').boundingBox();
     assert.ok(playBox.y+playBox.height<=size.height,`Play below viewport at ${size.width}x${size.height}: ${JSON.stringify(playBox)}`);
     assert.equal(await page.locator('.keyboard-shortcuts').isVisible(),false);
@@ -40,14 +41,27 @@ try {
   }
   await page.setViewportSize({width:834,height:1194});
   await page.locator('#bpm').fill('140');await page.locator('#bpm').press('Tab');
-  await page.locator('#play').click();await page.getByRole('button',{name:'Pause',exact:true}).waitFor();
+  await page.locator('#play').click();await page.getByRole('button',{name:'Stop',exact:true}).waitFor();
   await page.waitForFunction(()=>window.iosCalls.some(c=>c.command==='command'&&c.payload.type==='start'));
   const calls=await page.evaluate(()=>window.iosCalls);
   assert.ok(calls.findIndex(c=>c.command==='configure')<calls.findIndex(c=>c.command==='command'&&c.payload.type==='start'));
   assert.ok(calls.some(c=>c.command==='saveSettings'&&c.payload.settings.bpm===140));
   await page.evaluate(()=>window.dispatchEvent(new CustomEvent('ios-clicks',{detail:[{bar:3,beat:2,beatStart:true,bpm:140}]})));
   await page.waitForFunction(()=>document.querySelector('#position').textContent.includes('BAR 03'));
+  // Presets while playing are queued through the native tempo command, before the matching config.
+  await page.locator('#preset-at-bar').check();
+  await page.locator('#preset-gradual').check();
+  await page.locator('.preset-button').nth(0).click();
+  const presetCalls=await page.evaluate(()=>window.iosCalls.map(c=>c.command).slice(-2));
+  assert.deepEqual(presetCalls,['tempo','configure']);
+  assert.deepEqual(await page.evaluate(()=>window.iosCalls.filter(c=>c.command==='tempo').map(c=>c.payload)),[{bpm:200,atBar:true,bars:4}]);
+  await page.locator('#preset-at-bar').uncheck();await page.locator('#preset-gradual').uncheck();
   await page.locator('#play').click();
+  await page.getByRole('button',{name:'Start',exact:true}).waitFor();
+  assert.ok((await page.locator('#position').textContent()).includes('BAR 01'));
+  assert.ok(await page.evaluate(()=>window.iosCalls.some(c=>c.command==='command'&&c.payload.type==='reset')));
+  await page.locator('.preset-button').nth(1).click();
+  assert.equal(await page.locator('#bpm').inputValue(),'150');
   await page.locator('#open-update').click();
   assert.ok((await page.locator('#update-status').textContent()).includes('sideload'));
   assert.equal(await page.locator('#install-update').isVisible(),false);
@@ -57,7 +71,7 @@ try {
   await page.locator('#open-export').click();
   await page.locator('#export-length').fill('1');await page.locator('#export-unit').selectOption('seconds');
   await page.locator('#save-export').click();
-  await page.waitForFunction(()=>document.querySelector('#export-status').textContent==='MP3 saved: Click-140bpm.mp3. Files → On My iPad → Click → Exports.');
+  await page.waitForFunction(()=>document.querySelector('#export-status').textContent==='MP3 saved: Click-150bpm.mp3. Files → On My iPad → Click → Exports.');
   assert.ok(await page.evaluate(()=>window.exportBytes>20000));
   await page.evaluate(()=>{window.failExport=true;});
   await page.locator('#save-export').click();
@@ -73,5 +87,5 @@ try {
     await page.locator('#close-update').click();
   }
   assert.deepEqual(errors,[]);
-  console.log('PASS: iPad/iPhone layouts, native command ordering, beat display, settings persistence bridge, MP3 export bridge, update guidance and translations.');
+  console.log('PASS: iPad/iPhone layouts, BPM presets over the native tempo bridge, Stop rewinds, native command ordering, beat display, settings persistence bridge, MP3 export bridge, update guidance and translations.');
 } finally {await app.close();}

@@ -1,10 +1,11 @@
 #include "../Click/RhythmDSP.hpp"
 #include <cassert>
 #include <iostream>
+#include <vector>
 
 static void push(RhythmDSP &engine,int type,RhythmConfig config={}) { RhythmCommand c;c.type=type;c.config=config;assert(engine.commands.push(c)); }
 int main() {
-    for(int bpm:{10,126,300}) for(int note=0;note<8;note++) {
+    for(int bpm:{10,126,250}) for(int note=0;note<8;note++) {
         RhythmDSP engine(48000,{1},{.5});RhythmConfig config;config.bpm=bpm;config.note=note;
         push(engine,0,config);push(engine,1);
         float left,right;int clicks=0;int64_t frames=int64_t(48000)*60*4/bpm;
@@ -29,10 +30,37 @@ int main() {
         c.volume=0;push(engine,0,c);engine.render(&left,&right,1);assert(engine.currentBpm==130);
         push(engine,3);engine.render(&left,&right,1);assert(engine.currentBpm==120);
     }
+    {   // Preset: change after this bar waits for the next downbeat.
+        RhythmDSP engine(48000,{1},{.5});RhythmConfig c;c.bpm=120;
+        push(engine,0,c);push(engine,1);float left,right;
+        std::vector<RhythmEvent> beats;
+        auto run=[&](int frames){ for(int i=0;i<frames;i++){ engine.render(&left,&right,1);RhythmEvent e;while(engine.events.pop(e)) if(e.beatStart) beats.push_back(e);} };
+        run(36000);                       // 0.75 s at 120 BPM: beats 1-2 of bar 1
+        assert(beats.size()==2);
+        RhythmCommand t;t.type=5;t.bpm=180;t.atBar=true;assert(engine.commands.push(t));
+        c.bpm=180;push(engine,0,c);       // the UI follows with the same tempo in its config
+        run(72000);
+        assert(beats.size()>=5);
+        assert(beats[3].bpm==120 && beats[3].bar==1);
+        assert(beats[4].bar==2 && beats[4].beat==0 && beats[4].bpm==180);
+        assert(engine.currentBpm==180 && !engine.inTransition);
+    }
+    {   // Preset: gradual change glides over N bars and lands on the target.
+        RhythmDSP engine(48000,{1},{.5});RhythmConfig c;c.bpm=100;
+        push(engine,0,c);push(engine,1);float left,right;
+        engine.render(&left,&right,1);
+        RhythmCommand t;t.type=5;t.bpm=200;t.bars=2;assert(engine.commands.push(t));
+        int last=0;bool rose=false;
+        for(int i=0;i<48000*6;i++){ engine.render(&left,&right,1);RhythmEvent e;while(engine.events.pop(e)) if(e.beatStart){ if(last && e.bpm>last) rose=true; assert(e.bpm>=last); last=e.bpm; } }
+        assert(rose && last==200 && engine.currentBpm==200 && !engine.inTransition);
+        RhythmCommand clampHigh;clampHigh.type=5;clampHigh.bpm=999;assert(engine.commands.push(clampHigh));
+        engine.render(&left,&right,1);assert(engine.currentBpm==250);
+        push(engine,3);engine.render(&left,&right,1);assert(engine.currentBpm==250);   // reset keeps the set tempo
+    }
     RhythmDSP engine(48000,std::vector<float>(2000,1),{.5});RhythmConfig c;c.pan=-100;
     push(engine,0,c);push(engine,1);float left,right;
     for(int i=0;i<2000;i++)engine.render(&left,&right,1);
     assert(left>right*30);
     Ring<int,3> ring;assert(ring.push(1));assert(ring.push(2));assert(!ring.push(3));int value;assert(ring.pop(value)&&value==1);assert(ring.push(3));assert(ring.pop(value)&&value==2);assert(ring.pop(value)&&value==3);assert(!ring.pop(value));
-    std::cout<<"PASS: iOS DSP patterns at boundary tempos, automation boundaries, pause/reset, gain-only preservation, pan and command queue.\n";
+    std::cout<<"PASS: iOS DSP patterns at boundary tempos, automation boundaries, pause/reset, gain-only preservation, pan, command queue and preset tempo changes.\n";
 }

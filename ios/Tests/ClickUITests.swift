@@ -10,13 +10,21 @@ final class ClickUITests: XCTestCase {
         let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true AND hittable == true"), object: start)
         XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 30), .completed)
         start.tap()
-        let pause = app.buttons["Pause"].firstMatch
-        XCTAssertTrue(pause.waitForExistence(timeout: 10),app.debugDescription)
+        let stop = app.buttons["Stop"].firstMatch
+        XCTAssertTrue(stop.waitForExistence(timeout: 10),app.debugDescription)
+        // A preset while playing goes through the native tempo queue and keeps playback running.
+        app.buttons["Preset 2: 150 BPM"].firstMatch.tap()
+        let tempoField = app.textFields["Tempo in beats per minute"].firstMatch
+        let switched = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == '150'"), object: tempoField)
+        XCTAssertEqual(XCTWaiter.wait(for: [switched], timeout: 10), .completed, app.debugDescription)
+        XCTAssertTrue(stop.exists)
         XCUIDevice.shared.press(.home)
         app.activate()
-        XCTAssertTrue(pause.waitForExistence(timeout: 10),app.debugDescription)
-        pause.tap()
-        XCTAssertTrue(app.buttons["Resume"].firstMatch.waitForExistence(timeout: 10),app.debugDescription)
+        XCTAssertTrue(stop.waitForExistence(timeout: 10),app.debugDescription)
+        stop.tap()
+        // No resume: Stop rewinds, and the button returns to Start.
+        XCTAssertTrue(app.buttons["Start"].firstMatch.waitForExistence(timeout: 10),app.debugDescription)
+        XCTAssertFalse(app.buttons["Resume"].firstMatch.exists)
         app.buttons["Update"].firstMatch.tap()
         XCTAssertTrue(app.buttons["Open GitHub releases"].firstMatch.waitForExistence(timeout: 5))
         app.buttons["Close update"].firstMatch.tap()
@@ -37,7 +45,8 @@ final class ClickUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Save MP3"].firstMatch.waitForNonExistence(timeout: 10),app.debugDescription)
         let screenshot = XCTAttachment(screenshot: app.screenshot());screenshot.lifetime = .keepAlways;add(screenshot)
         XCUIDevice.shared.orientation = .landscapeLeft
-        XCTAssertTrue(app.buttons["Resume"].firstMatch.waitForExistence(timeout: 15),app.debugDescription)
+        XCTAssertTrue(app.buttons["Start"].firstMatch.waitForExistence(timeout: 15),app.debugDescription)
+        XCTAssertTrue(app.buttons["Tap tempo"].firstMatch.exists || app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Tap tempo'")).firstMatch.exists, app.debugDescription)
         let landscape = XCTAttachment(screenshot: app.screenshot());landscape.lifetime = .keepAlways;add(landscape)
         XCUIDevice.shared.orientation = .portrait
     }
@@ -52,16 +61,32 @@ final class ClickUITests: XCTestCase {
         let initial = try XCTUnwrap(Int(tempo.value as? String ?? ""))
         let frame = increase.frame
         increase.doubleTap()
-        XCTAssertEqual(Int(tempo.value as? String ?? ""), min(300, initial + 2))
+        XCTAssertEqual(Int(tempo.value as? String ?? ""), min(250, initial + 2))
         XCTAssertEqual(increase.frame.width,frame.width,accuracy:1)
         XCTAssertEqual(increase.frame.minX,frame.minX,accuracy:1)
         decrease.press(forDuration:1.05)
         let held = try XCTUnwrap(Int(tempo.value as? String ?? ""))
-        XCTAssertLessThanOrEqual(held,min(300,initial + 2) - 21)
+        XCTAssertLessThanOrEqual(held,min(250,initial + 2) - 21)
         XCTAssertEqual(decrease.frame.width,frame.width,accuracy:1)
         // Repeated taps on non-button content must not zoom either.
         app.staticTexts["TEMPO"].firstMatch.doubleTap()
         XCTAssertEqual(increase.frame.width,frame.width,accuracy:1)
         XCTAssertEqual(increase.frame.minX,frame.minX,accuracy:1)
+    }
+
+    func testBpmPresets() throws {
+        continueAfterFailure = false
+        let app = XCUIApplication(); app.launch()
+        let tempo = app.textFields["Tempo in beats per minute"].firstMatch
+        XCTAssertTrue(tempo.waitForExistence(timeout:30))
+        let preset = app.buttons["Preset 3: 175 BPM"].firstMatch
+        XCTAssertTrue(preset.waitForExistence(timeout:10), app.debugDescription)
+        preset.tap()
+        XCTAssertEqual(tempo.value as? String, "175")
+        app.buttons["Delete selected preset"].firstMatch.tap()
+        XCTAssertTrue(preset.waitForNonExistence(timeout:5), app.debugDescription)
+        app.buttons["Add current BPM as a preset"].firstMatch.tap()
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label ENDSWITH ': 175 BPM'")).firstMatch.waitForExistence(timeout:5), app.debugDescription)
+        let shot = XCTAttachment(screenshot: app.screenshot()); shot.lifetime = .keepAlways; add(shot)
     }
 }
