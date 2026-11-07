@@ -22,7 +22,7 @@ test('bar automation changes only after completed bars, including compound meter
 test('second automation preserves fractional musical phase and clips at tempo bounds', () => {
   const {events} = hits({bpm:90,note:'quarter',automation:{enabled:true,delta:60,every:1,unit:'seconds'}},2);
   close(events[0].time,0); close(events[1].time,2/3); close(events[2].time,1.2); close(events[3].time,1.6);
-  assert.equal(hits({bpm:290,automation:{enabled:true,delta:40,every:1,unit:'seconds'}},3).clock.bpm,300);
+  assert.equal(hits({bpm:240,automation:{enabled:true,delta:40,every:1,unit:'seconds'}},3).clock.bpm,250);
   assert.equal(hits({bpm:20,automation:{enabled:true,delta:-40,every:1,unit:'seconds'}},3).clock.bpm,10);
 });
 test('volume and pan edits retain automation progress, reset and tempo edits restart it', () => {

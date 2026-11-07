@@ -3,6 +3,17 @@ import { t } from './i18n.js';
 export function setupUpdates(beforeInstall) {
   const $ = selector => document.querySelector(selector);
   const dialog = $('#update-dialog');
+  if (window.IOSClick) {
+    const refresh = () => {
+      $('#update-status').textContent = t('Install iPad and iPhone updates using the same app you used to sideload Click.');
+      $('#check-update').textContent = t('Open GitHub releases');
+      for (const id of ['download-update','install-update','update-progress','update-install-note']) $('#'+id).hidden = true;
+    };
+    $('#open-update').addEventListener('click', () => { refresh(); dialog.showModal(); });
+    $('#close-update').addEventListener('click', () => dialog.close());
+    $('#check-update').addEventListener('click', () => window.IOSClick.call('releasePage'));
+    return refresh;
+  }
   let state = { status: 'idle' }, timer;
   const native = window.NativeClick;
   const desktop = window.DesktopClick;

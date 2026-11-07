@@ -1,4 +1,4 @@
-import { sanitize } from './timing.js';
+import { sanitize, clampBpm } from './timing.js';
 import { TempoClock } from './tempo-clock.js';
 
 export const EXPORT_RATE = 48000;
@@ -12,7 +12,7 @@ export function exportDuration(input, length, unit) {
     let quarters = length * config.numerator * 4 / config.denominator, step = 0;
     const a = config.automation;
     while (quarters > 1e-9) {
-      const bpm = Math.max(10, Math.min(300, config.bpm + (a.enabled ? step * a.delta : 0)));
+      const bpm = clampBpm(config.bpm + (a.enabled ? step * a.delta : 0));
       const span = !a.enabled ? quarters : a.unit === 'bars' ? a.every * config.numerator * 4 / config.denominator : a.every * bpm / 60;
       const consumed = Math.min(quarters, span);
       seconds += consumed * 60 / bpm;

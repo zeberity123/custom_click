@@ -18,30 +18,24 @@ public final class MetronomeService extends Service {
     private RhythmEngine engine;
     private volatile boolean alive = true, foreground;
     private volatile String error = "";
-    private AudioManager manager;
-    private AudioFocusRequest focus;
     private PowerManager.WakeLock wake;
     private MediaSession session;
     private Thread worker;
     private final Object signal = new Object();
     private volatile AudioTrack track;
     private int notifiedBpm = -1;
-    private final BroadcastReceiver noisy = new BroadcastReceiver() { public void onReceive(Context c, Intent intent) { pause(); } };
+    private final BroadcastReceiver noisy = new BroadcastReceiver() { public void onReceive(Context c, Intent intent) { reset(); } };
     public final class LocalBinder extends Binder { public MetronomeService getService() { return MetronomeService.this; } }
     @Override public IBinder onBind(Intent intent) { return binder; }
     @Override public void onCreate() {
         super.onCreate();
-        manager = (AudioManager)getSystemService(AUDIO_SERVICE);
-        focus = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN).setAudioAttributes(attributes()).setOnAudioFocusChangeListener(change -> {
-            if (change < 0) { pause(); emitState("Audio focus lost. Tap Resume when you are ready."); }
-        }, main).build();
         wake = ((PowerManager)getSystemService(POWER_SERVICE)).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "CustomClick:audio");
         wake.setReferenceCounted(false);
         refreshLanguage();
         session = new MediaSession(this, "Custom Click");
         session.setCallback(new MediaSession.Callback() {
             @Override public void onPlay() { startForegroundService(new Intent(MetronomeService.this, MetronomeService.class).setAction(PLAY)); }
-            @Override public void onPause() { pause(); }
+            @Override public void onPause() { reset(); }
             @Override public void onStop() { reset(); }
         });
         IntentFilter filter = new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
@@ -92,13 +86,18 @@ public final class MetronomeService extends Service {
             JSONObject value = new JSONObject(json);
             JSONArray input = value.optJSONArray("accents");
             boolean[] accents = new boolean[input == null ? 0 : Math.min(12,input.length())];
-            for (int i=0;i<accents.length;i++) accents[i] = input.optBoolean(i,true);
+            for (int i=0;i<accents.length;i++) accents[i] = input.optBoolean(i,i==0);
             JSONObject automation = value.optJSONObject("automation");
             if (automation == null) automation = new JSONObject();
-            engine.configure(new RhythmEngine.Config(value.optInt("bpm",RhythmEngine.DEFAULT_BPM), value.optInt("numerator",4), value.optInt("denominator",4), value.optString("note","eighth"), (float)value.optDouble("volume",65), (float)value.optDouble("pan",0), accents, automation.optBoolean("enabled",false), automation.optInt("delta",5), automation.optInt("every",4), automation.optString("unit","bars")));
+            engine.configure(new RhythmEngine.Config(value.optInt("bpm",RhythmEngine.DEFAULT_BPM), value.optInt("numerator",4), value.optInt("denominator",4), value.optString("note","quarter"), (float)value.optDouble("volume",65), (float)value.optDouble("pan",0), accents, automation.optBoolean("enabled",false), automation.optInt("delta",5), automation.optInt("every",4), automation.optString("unit","bars")));
             getSharedPreferences("audio",0).edit().putString("config", configJson().toString()).apply();
             main.post(() -> { if (foreground) getSystemService(NotificationManager.class).notify(NOTIFICATION, notification()); });
         } catch (JSONException failure) { error = "Invalid metronome settings."; }
+    }
+    public void changeTempo(int bpm, boolean atBar, int bars) {
+        if (engine == null) return;
+        engine.changeTempo(bpm, atBar, bars);
+        getSharedPreferences("audio",0).edit().putString("config", configJson().toString()).apply();
     }
     private JSONObject configJson() {
         JSONObject json = new JSONObject();
@@ -126,18 +125,20 @@ public final class MetronomeService extends Service {
         String action = intent == null ? STOP : intent.getAction();
         if (PLAY.equals(action)) {
             startForeground(NOTIFICATION,notification()); foreground = true;
-            if (engine == null || !error.isEmpty() || manager.requestAudioFocus(focus) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            // A practice click accompanies other media. Do not request audio focus:
+            // taking it pauses/ducks the backing track, and losing it stops the click.
+            // AudioTrack mixes with other apps while the foreground service keeps time.
+            if (engine == null || !error.isEmpty()) {
                 pause(); emitState(error.isEmpty() ? "Audio output is in use. Try again." : error);
             } else {
                 if (!wake.isHeld()) wake.acquire();
                 engine.start(); wakeWorker(); session.setActive(true); updateMediaState(true); emitState("");
             }
-        } else if (PAUSE.equals(action)) pause(); else reset();
+        } else reset();
         return START_NOT_STICKY;
     }
     public void pause() {
         if (engine != null) engine.pause();
-        manager.abandonAudioFocusRequest(focus);
         if (wake.isHeld()) wake.release();
         updateMediaState(false); session.setActive(false);
         stopForeground(STOP_FOREGROUND_REMOVE); foreground = false; stopSelf(); emitState("");
@@ -153,7 +154,7 @@ public final class MetronomeService extends Service {
         PendingIntent pause = PendingIntent.getService(this,1,new Intent(this,MetronomeService.class).setAction(PAUSE),PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         int bpm = engine == null ? RhythmEngine.DEFAULT_BPM : engine.currentBpm();
         return new Notification.Builder(this,CHANNEL).setSmallIcon(R.drawable.ic_notification).setColor(0xff39c5bb).setContentTitle("Click · " + bpm + " BPM").setContentText(text("Metronome is playing","메트로놈 재생 중","メトロノーム再生中")).setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true)
-            .addAction(new Notification.Action.Builder(android.R.drawable.ic_media_pause,text("Pause","일시정지","一時停止"),pause).build())
+            .addAction(new Notification.Action.Builder(android.R.drawable.ic_media_pause,text("Stop","정지","停止"),pause).build())
             .setStyle(new Notification.MediaStyle().setMediaSession(session.getSessionToken()).setShowActionsInCompactView(0)).build();
     }
     private void beatEvent(long frame, int beat, long bar, boolean beatStart, boolean click, boolean high) {
@@ -170,7 +171,7 @@ public final class MetronomeService extends Service {
             else time += Math.max(0, frame - (output.getPlaybackHeadPosition() & 0xffffffffL)) / (double)RhythmEngine.RATE;
         }
         JSONObject event = new JSONObject();
-        try { event.put("bpm",engine.currentBpm()).put("time",time).put("beat",beat).put("bar",bar).put("beatStart",beatStart).put("click",click).put("high",high); } catch(JSONException ignored) { }
+        try { event.put("bpm",engine.currentBpm()).put("time",time).put("beat",beat).put("bar",bar).put("beatStart",beatStart).put("click",click).put("high",high).put("ramping",engine.isRamping()); } catch(JSONException ignored) { }
         MainActivity.emit("native-click",event);
     }
     private void audioLoop() {
@@ -211,7 +212,6 @@ public final class MetronomeService extends Service {
         wakeWorker();
         if (engine != null) engine.pause();
         if (worker != null) worker.interrupt();
-        manager.abandonAudioFocusRequest(focus);
         if (wake.isHeld()) wake.release();
         session.release(); unregisterReceiver(noisy);
         super.onDestroy();

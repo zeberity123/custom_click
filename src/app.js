@@ -1,13 +1,26 @@
-import { DEFAULTS, sanitize, TapTempo } from './timing.js';
+import { DEFAULTS, sanitize, TapTempo, MIN_BPM, MAX_BPM, clampBpm } from './timing.js';
 import { ClickAudio } from './audio.js';
 import { NativeAudio } from './native-audio.js';
 import { t, initLanguage } from './i18n.js';
 import { setupExport } from './export-ui.js';
 import { setupUpdates } from './update-ui.js';
 import { setupAndroidBack } from './android-back.js';
+import { IOSAudio } from './ios-audio.js';
+import { setupTempoButton } from './tempo-buttons.js';
 
 const isAndroid = typeof window.NativeClick !== 'undefined';
+const isIOS = typeof window.IOSClick !== 'undefined';
+const isNative = isAndroid || isIOS;
 if (isAndroid) document.documentElement.classList.add('android');
+if (isIOS) {
+  document.documentElement.classList.add('ios');
+  document.querySelector('meta[name="viewport"]').content = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover';
+  // Apple fonts do not consistently include the whole/half-note music code points.
+  for (const note of ['whole','half']) {
+    const symbol = document.querySelector(`[data-note="${note}"] > span`);
+    symbol.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="10" cy="${note === 'whole' ? 13 : 18}" rx="5" ry="3" transform="rotate(-20 10 ${note === 'whole' ? 13 : 18})" fill="none" stroke="currentColor" stroke-width="1.8"/>${note === 'half' ? '<path d="M15 17V3" fill="none" stroke="currentColor" stroke-width="1.8"/>' : ''}</svg>`;
+  }
+}
 
 const $ = selector => document.querySelector(selector);
 const mobileQuery = matchMedia('(max-width: 650px)');
@@ -79,17 +92,16 @@ catch { config = sanitize(DEFAULTS); }
 // A new session starts with automation off; an active Android service restores its state below.
 config.automation.enabled = false;
 let playing = false;
-let started = false;
 let events = [];
 let activeBeat = 0;
 let currentBpm = config.bpm;
 let position = { bar: 1, beat: 0 };
 let startRequest = 0;
-let tapTimer;
+let tapTimer, tapHintTimer;
 let editingTempo = false;
 const tapTempo = new TapTempo();
 const noteNames = { whole: 'Whole note', half: 'Half note', quarter: 'Quarter note', eighth: 'Eighth note', sixteenth: 'Sixteenth note', triplet: 'Triplet', 'triplet-skip': 'Triplet · 1 & 3', 'sixteenth-skip': '16ths · 1 & 4' };
-const AudioEngine = isAndroid ? NativeAudio : ClickAudio;
+const AudioEngine = isAndroid ? NativeAudio : isIOS ? IOSAudio : ClickAudio;
 const audio = new AudioEngine(event => {
   if (playing) {
     events.push(event);
@@ -97,11 +109,8 @@ const audio = new AudioEngine(event => {
   }
 }, state => {
   if ((state === 'suspended' || state === 'interrupted') && playing) {
-    playing = false;
-    audio.send('pause');
-    events = [];
-    renderTransport();
-    showError(t('Audio was interrupted. Press Resume to continue.'));
+    stopPlayback();
+    showError(t('Audio was interrupted. Press Start to continue.'));
   }
 });
 
@@ -109,18 +118,23 @@ function syncNativeState(state) {
   if (state.config?.bpm) { config = sanitize(state.config); persist(); render(); }
   currentBpm = state.currentBpm ?? config.bpm;
   renderAutomation();
+  const wasPlaying = playing;
   playing = state.playing === true;
-  if (playing) started = true;
-  else { events = []; }
+  if (!playing) { events = []; currentBpm = config.bpm; if (wasPlaying) { activeBeat = 0; position = {bar:1,beat:0}; renderPosition(); } renderCurrentTempo(); }
   renderTransport();
   if (state.error || state.message) showError(state.error || state.message);
 }
-if (isAndroid) {
+if (isNative) {
   window.addEventListener('native-state', event => syncNativeState(event.detail));
 }
 
 function showError(message) { $('#error').textContent = t(message); $('#error').hidden = false; }
-function persist() { try { localStorage.setItem(storageKey, JSON.stringify(config)); } catch { /* Ephemeral sessions can still play. */ } }
+// Tap the banner to dismiss it (it floats over the header on short landscape screens).
+$('#error').addEventListener('click', () => { $('#error').hidden = true; });
+function persist() {
+  try { localStorage.setItem(storageKey, JSON.stringify(config)); } catch { /* Ephemeral sessions can still play. */ }
+  if (isIOS) void window.IOSClick.call('saveSettings', { settings: config }).catch(() => {});
+}
 function update(patch) {
   const rhythmChanged = ['numerator', 'denominator', 'note', 'automation'].some(key => Object.hasOwn(patch, key) && patch[key] !== config[key]);
   config = sanitize({ ...config, ...patch });
@@ -171,21 +185,26 @@ function renderBeats() {
   });
 }
 function renderTransport() {
-  $('#play-label').textContent = t(playing ? 'Pause' : started ? 'Resume' : 'Start');
-  $('#play-icon').textContent = playing ? 'Ⅱ' : '▶';
+  $('#play-label').textContent = t(playing ? 'Stop' : 'Start');
+  $('#play-icon').textContent = playing ? '■' : isIOS ? '▶︎' : '▶';
   $('#play').setAttribute('aria-label', $('#play-label').textContent);
-  $('#play-state').textContent = playing ? t('IN THE POCKET') : started ? t('PAUSED') : '';
+  $('#play').classList.toggle('playing', playing);
+  $('#play-state').textContent = playing ? t('IN THE POCKET') : '';
   renderBeats();
+}
+// There is no resume: stopping always rewinds to bar one, so every Start begins at the downbeat.
+function stopPlayback() {
+  startRequest++;
+  playing = false;
+  events = [];
+  activeBeat = 0;
+  audio.send('reset');
+  position = {bar:1,beat:0}; currentBpm = config.bpm; renderPosition(); renderAutomation();
+  renderTransport();
 }
 async function togglePlayback() {
   if ($('#play').disabled) return;
-  if (playing) {
-    playing = false;
-    audio.send('pause');
-    events = [];
-    renderTransport();
-    return;
-  }
+  if (playing) { stopPlayback(); return; }
   $('#play').disabled = true;
   const request = ++startRequest;
   try {
@@ -194,21 +213,11 @@ async function togglePlayback() {
     audio.configure(config);
     $('#error').hidden = true;
     playing = true;
-    started = true;
+    events = []; activeBeat = 0; position = {bar:1,beat:0}; currentBpm = config.bpm; renderPosition(); renderCurrentTempo();
     audio.send('start');
     renderTransport();
   } catch (error) { showError(t('Could not start audio: {error}',{error:error.message})); }
   finally { $('#play').disabled = false; }
-}
-function reset() {
-  startRequest++;
-  playing = false;
-  started = false;
-  events = [];
-  activeBeat = 0;
-  audio.send('reset');
-  position = {bar:1,beat:0}; currentBpm = config.bpm; renderPosition(); renderAutomation();
-  renderTransport();
 }
 async function preview(high) {
   try {
@@ -222,6 +231,8 @@ function tap() {
   const tempo = tapTempo.tap(performance.now());
   if (tempo !== null) update({ bpm: tempo });
   $('#tap-hint').textContent = tempo === null ? t('Keep tapping…') : t('{count} taps · {bpm} BPM',{count:tapTempo.times.length,bpm:tempo});
+  clearTimeout(tapHintTimer);
+  tapHintTimer = setTimeout(() => { $('#tap-hint').textContent = t('Tap at least twice'); }, 6500);
   $('#tap').classList.add('tapped');
   clearTimeout(tapTimer);
   tapTimer = setTimeout(() => $('#tap').classList.remove('tapped'), 100);
@@ -250,11 +261,15 @@ $('#bpm').addEventListener('change', commitTempo);
 $('#bpm').addEventListener('blur', () => { commitTempo(); renderCurrentTempo(); });
 $('#bpm').addEventListener('keydown', event => { if (event.key === 'Enter') { commitTempo(); event.currentTarget.blur(); } });
 $('#tempo-range').addEventListener('input', event => update({ bpm: event.target.value }));
-$('#decrease').addEventListener('click', event => update({ bpm: displayedTempo() - (event.shiftKey ? 10 : 1) }));
-$('#increase').addEventListener('click', event => update({ bpm: displayedTempo() + (event.shiftKey ? 10 : 1) }));
+function stepTempo(delta) {
+  // Pointer-down runs before the tempo field loses focus; commit typed edits first.
+  commitTempo();
+  update({ bpm: displayedTempo() + delta });
+}
+setupTempoButton($('#decrease'), step => stepTempo(-step));
+setupTempoButton($('#increase'), stepTempo);
 $('#tap').addEventListener('click', tap);
 $('#play').addEventListener('click', togglePlayback);
-$('#reset').addEventListener('click', reset);
 $('#numerator').addEventListener('change', event => update({ numerator: event.target.value }));
 $('#denominator').addEventListener('change', event => update({ denominator: Number(event.target.value) }));
 document.querySelectorAll('[data-note]').forEach(button => button.addEventListener('click', () => update({ note: button.dataset.note })));
@@ -268,7 +283,7 @@ document.addEventListener('keydown', event => {
   if (event.code === 'Space' && event.target.closest('#automation-enabled')) return;
   if (event.code === 'Space') { event.preventDefault(); togglePlayback(); }
   if (event.key.toLowerCase() === 't') { event.preventDefault(); tap(); }
-  if (event.key.toLowerCase() === 'r') { event.preventDefault(); reset(); }
+  if (/^[1-8]$/.test(event.key) && presets.list[Number(event.key) - 1]) { event.preventDefault(); applyPreset(Number(event.key) - 1); }
   if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
     event.preventDefault();
     update({ bpm: displayedTempo() + (event.key === 'ArrowUp' ? 1 : -1) * (event.shiftKey ? 10 : 1) });
@@ -281,7 +296,7 @@ function animate() {
     let latestBeat;
     while (events.length && events[0].time <= time) {
       const event = events.shift();
-      if (event.bpm != null && currentBpm !== event.bpm) { currentBpm = event.bpm; renderCurrentTempo(); }
+      if (event.bpm != null && currentBpm !== Math.round(event.bpm)) { currentBpm = Math.round(event.bpm); renderCurrentTempo(); }
       if (event.beatStart) latestBeat = event;
     }
     if (latestBeat) {
@@ -306,14 +321,19 @@ function renderAutomation() {
   document.querySelectorAll('.automation-fields input, .automation-fields select').forEach(element => element.disabled = !a.enabled);
   renderCurrentTempo();
 }
-function displayedTempo() { return config.automation.enabled ? currentBpm : config.bpm; }
+// While playing, the large number follows the audible tempo (automation, preset ramps).
+function displayedTempo() { return playing || config.automation.enabled ? currentBpm : config.bpm; }
 function renderCurrentTempo() {
   const bpm = displayedTempo();
   if (!editingTempo) $('#bpm').value = bpm;
   $('#tempo-range').value = bpm;
   $('#tempo-name').textContent = bpm < 60 ? 'LARGO' : bpm < 76 ? 'ADAGIO' : bpm < 108 ? 'ANDANTE' : bpm < 120 ? 'MODERATO' : bpm < 168 ? 'ALLEGRO' : bpm < 200 ? 'PRESTO' : 'PRESTISSIMO';
-  $('#decrease').disabled = bpm <= 10;
-  $('#increase').disabled = bpm >= 300;
+  $('#decrease').disabled = bpm <= MIN_BPM;
+  $('#increase').disabled = bpm >= MAX_BPM;
+  const target = playing && !config.automation.enabled && bpm !== config.bpm;
+  $('#tempo-target').hidden = !target;
+  if (target) $('#tempo-target').textContent = t('→ {bpm} BPM', {bpm:config.bpm});
+  renderPresets();
   const enabled = config.automation.enabled, status = t('Start tempo: {bpm} BPM', {bpm:config.bpm});
   $('#automation-status').textContent = enabled ? status : t('Automation off');
   $('#tempo-caption').textContent = t('BEATS PER MINUTE');
@@ -325,9 +345,105 @@ function changeAutomation() {
 }
 $('#automation-enabled').addEventListener('click', () => update({ automation: { ...config.automation, enabled: !config.automation.enabled } }));
 for (const id of ['automation-direction','automation-delta','automation-every','automation-unit']) $('#'+id).addEventListener('change',changeAutomation);
+// BPM presets: up to 8 buttons (4 × 2). The selected preset can be deleted with −; + stores the main tempo.
+const presetKey = 'click-presets-v1';
+const MAX_PRESETS = 8;
+function loadPresets() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(presetKey)) ?? {}; } catch { /* Use defaults. */ }
+  const list = Array.isArray(saved.list) ? saved.list : [200, 150, 175, 192];
+  return {
+    list: [...new Set(list.map(Number).filter(Number.isFinite).map(bpm => clampBpm(Math.round(bpm))))].slice(0, MAX_PRESETS),
+    selected: Number.isInteger(saved.selected) ? saved.selected : null,
+    atBar: saved.atBar === true,
+    gradual: saved.gradual === true,
+    bars: Math.max(1, Math.min(64, Math.round(Number(saved.bars) || 4))),
+  };
+}
+const presets = loadPresets();
+function savePresets() { try { localStorage.setItem(presetKey, JSON.stringify(presets)); } catch { /* Ephemeral sessions keep presets in memory. */ } }
+function selectedPreset() {
+  const index = presets.selected;
+  return index !== null && presets.list[index] === config.bpm ? index : null;
+}
+function renderPresets() {
+  const grid = $('#presets');
+  if (!grid) return;
+  const selected = selectedPreset();
+  if (grid.children.length !== MAX_PRESETS) {
+    grid.replaceChildren(...Array.from({ length: MAX_PRESETS }, (_, i) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'preset-button';
+      button.innerHTML = '<strong></strong><small>BPM</small>';
+      button.addEventListener('click', () => applyPreset(i));
+      return button;
+    }));
+  }
+  Array.from(grid.children).forEach((button, i) => {
+    const bpm = presets.list[i];
+    const empty = bpm === undefined;
+    button.classList.toggle('empty', empty);
+    button.disabled = empty;
+    button.tabIndex = empty ? -1 : 0;
+    button.querySelector('strong').textContent = empty ? '' : bpm;
+    button.setAttribute('aria-pressed', String(i === selected));
+    button.classList.toggle('pending', !empty && i === selected && playing && currentBpm !== bpm && !config.automation.enabled);
+    if (empty) button.setAttribute('aria-label', t('Empty preset slot'));
+    else button.setAttribute('aria-label', t('Preset {index}: {bpm} BPM', {index:i + 1, bpm}));
+  });
+  $('#preset-remove').disabled = selected === null;
+  $('#preset-add').disabled = presets.list.length >= MAX_PRESETS;
+  $('#preset-at-bar').checked = presets.atBar;
+  $('#preset-gradual').checked = presets.gradual;
+  $('#preset-bars').value = presets.bars;
+  $('#preset-bars').disabled = !presets.gradual;
+}
+function applyPreset(index) {
+  const bpm = presets.list[index];
+  if (bpm === undefined) return;
+  presets.selected = index;
+  savePresets();
+  if (!playing) { update({ bpm }); return; }
+  // While playing, the engine schedules the change itself so bar position and automation continue.
+  const bars = presets.gradual ? presets.bars : 0;
+  audio.send('tempo', { bpm, atBar: presets.atBar, bars });
+  config = sanitize({ ...config, bpm });
+  audio.configure(config);
+  persist();
+  if (!presets.atBar && !bars && !config.automation.enabled) currentBpm = bpm;
+  renderCurrentTempo();
+}
+$('#preset-add').addEventListener('click', () => {
+  if (presets.list.length >= MAX_PRESETS) return;
+  const bpm = clampBpm(Math.round(displayedTempo()));
+  const existing = presets.list.indexOf(bpm);
+  if (existing >= 0) presets.selected = existing;
+  else { presets.list.push(bpm); presets.selected = presets.list.length - 1; }
+  if (bpm !== config.bpm) presets.selected = null;
+  savePresets();
+  renderPresets();
+});
+$('#preset-remove').addEventListener('click', () => {
+  const index = selectedPreset();
+  if (index === null) return;
+  presets.list.splice(index, 1);
+  presets.selected = null;
+  savePresets();
+  renderPresets();
+});
+$('#preset-at-bar').addEventListener('change', event => { presets.atBar = event.target.checked; savePresets(); renderPresets(); });
+$('#preset-gradual').addEventListener('change', event => { presets.gradual = event.target.checked; savePresets(); renderPresets(); });
+$('#preset-bars').addEventListener('change', event => {
+  presets.bars = Math.max(1, Math.min(64, Math.round(Number(event.target.value) || presets.bars)));
+  savePresets(); renderPresets();
+});
 const refreshExport = setupExport(() => config);
 const refreshUpdates = setupUpdates(async () => { if (playing) await togglePlayback(); });
 setupAndroidBack(() => drawerOpen, () => setDrawer(false));
 initLanguage(() => { render(); renderTransport(); renderPosition(); $('#tap-hint').textContent = t('Tap at least twice'); refreshExport(); refreshUpdates(); });
 animate();
-if (isAndroid) audio.init().then(() => syncNativeState(audio.snapshot())).catch(error => showError(error.message));
+// The HTML can appear before modules and the native engine finish loading.
+// Keep Start unavailable until its handlers and initial native state are ready.
+if (isNative) audio.init().then(() => syncNativeState(audio.snapshot())).catch(error => showError(error.message)).finally(() => { $('#play').disabled = false; });
+else $('#play').disabled = false;

@@ -151,6 +151,8 @@ public final class MainActivity extends Activity {
         @JavascriptInterface public double clock() { return System.nanoTime() / 1e9; }
         @JavascriptInterface public String snapshot() { return service == null ? "{}" : service.snapshot().toString(); }
         @JavascriptInterface public void configure(String json) { if (service != null) service.configure(json); }
+        // Same bridge thread as configure(), so the tempo change always lands before the matching config.
+        @JavascriptInterface public void tempo(int bpm, boolean atBar, int bars) { if (service != null) service.changeTempo(bpm, atBar, bars); }
         @JavascriptInterface public void command(String type, boolean high) {
             runOnUiThread(() -> {
                 if (service == null) return;
@@ -162,7 +164,7 @@ public final class MainActivity extends Activity {
                         }
                         startForegroundService(new Intent(MainActivity.this, MetronomeService.class).setAction(MetronomeService.PLAY));
                     }
-                    case "pause" -> service.pause();
+                    case "pause" -> service.reset();
                     case "reset" -> service.reset();
                     case "preview" -> service.preview(high);
                 }

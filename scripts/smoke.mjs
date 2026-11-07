@@ -28,13 +28,26 @@ try {
   await page.locator('#bpm').press('Enter');
   await page.reload();
   assert.equal(await page.locator('#bpm').inputValue(), '176');
+  const increase = await page.locator('#increase').boundingBox();
+  await page.mouse.move(increase.x + increase.width / 2, increase.y + increase.height / 2);
+  await page.mouse.down();
+  await page.waitForFunction(() => Number(document.querySelector('#bpm').value) >= 197);
+  await page.mouse.up();
+  const heldTempo = await page.locator('#bpm').inputValue();
+  await page.waitForTimeout(350);
+  assert.equal(await page.locator('#bpm').inputValue(), heldTempo);
+  await page.locator('#bpm').fill('176'); await page.locator('#bpm').press('Enter');
+  await page.locator('#bpm').fill('150');
+  await page.locator('#increase').click();
+  assert.equal(await page.locator('#bpm').inputValue(), '151');
+  await page.locator('#bpm').fill('176'); await page.locator('#bpm').press('Enter');
   assert.equal(await page.locator('.beat-button').count(), 4);
   assert.equal(await page.locator('#meter').count(), 0);
   assert.equal(await page.locator('#custom-meter').isVisible(), true);
   assert.equal(await page.locator('.beat-button.active').count(), 1);
   await page.screenshot({ path: 'artifacts/desktop.png' });
   await page.locator('#play').click();
-  await page.getByRole('button', { name: 'Pause' }).waitFor();
+  await page.getByRole('button', { name: 'Stop' }).waitFor();
   const beatContinuity = await page.evaluate(() => new Promise(resolve => {
     const deadline = performance.now() + 900, beats = new Set();
     let gaps = 0;
@@ -51,12 +64,13 @@ try {
   assert.ok(beatContinuity.beats > 1);
   await page.waitForFunction(() => document.querySelector('#position').textContent.includes('BAR 02'));
   assert.equal(await page.locator('#error').isHidden(), true);
+  // Stop always rewinds: there is no Resume, the next Start begins at bar 1 beat 1.
   await page.locator('#play').click();
-  assert.equal(await page.locator('#play-label').textContent(), 'Resume');
-  assert.equal(await page.locator('.beat-button.active').count(), 1);
-  await page.locator('#reset').click();
   assert.equal(await page.locator('#play-label').textContent(), 'Start');
+  assert.equal(await page.locator('#reset').count(), 0);
+  assert.equal(await page.locator('.beat-button.active').count(), 1);
   assert.equal(await page.locator('.beat-button.active .beat-orb').textContent(), '1');
+  assert.ok((await page.locator('#position').textContent()).includes('BAR 01'));
   assert.equal(await page.locator('#dotted').count(), 0);
   for (const note of ['triplet', 'triplet-skip', 'sixteenth-skip']) {
     await page.locator(`[data-note="${note}"]`).click();
@@ -65,11 +79,14 @@ try {
     await page.reload();
     assert.equal(await page.locator(`[data-note="${note}"]`).getAttribute('aria-pressed'), 'true');
     await page.locator('#play').click();
-    await page.getByRole('button', { name: 'Pause' }).waitFor();
+    await page.getByRole('button', { name: 'Stop' }).waitFor();
     await page.waitForFunction(() => document.querySelector('#position').textContent.includes('BAR 02'));
     assert.equal(await page.locator('#error').isHidden(), true);
-    await page.locator('#reset').click();
+    await page.locator('#play').click();
   }
+  assert.equal(await page.locator('.beat-button').nth(1).getAttribute('data-high'), 'false');
+  await page.locator('.beat-button').nth(1).click();
+  assert.equal(await page.locator('.beat-button').nth(1).getAttribute('data-high'), 'true');
   await page.locator('.beat-button').nth(1).click();
   assert.equal(await page.locator('.beat-button').nth(1).getAttribute('data-high'), 'false');
   await page.locator('#numerator').fill('6');
@@ -84,7 +101,7 @@ try {
   await page.getByRole('button', { name: 'Triplet: first and third only', exact: true }).click();
   await page.locator('#bpm').fill('500');
   await page.locator('#bpm').press('Enter');
-  assert.equal(await page.locator('#bpm').inputValue(), '300');
+  assert.equal(await page.locator('#bpm').inputValue(), '250');
   await page.locator('#bpm').fill('1');
   await page.locator('#bpm').press('Enter');
   assert.equal(await page.locator('#bpm').inputValue(), '10');
@@ -105,9 +122,9 @@ try {
   await page.locator('#bpm').press('Enter');
   await page.locator('.metronome .section-label').first().click();
   await page.keyboard.press('Space');
-  await page.getByRole('button', { name: 'Pause' }).waitFor();
+  await page.getByRole('button', { name: 'Stop' }).waitFor();
   await page.keyboard.press('Space');
-  await page.keyboard.press('r');
+  await page.getByRole('button', { name: 'Start' }).waitFor();
   await page.locator('#tap').click();
   await page.waitForTimeout(500);
   await page.locator('#tap').click();

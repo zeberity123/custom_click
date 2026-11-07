@@ -20,7 +20,7 @@ function render(processor, seconds, startFrame = 0) {
   return block;
 }
 test('audio-thread timing stays within one sample over a minute at boundary tempos', () => {
-  for (const bpm of [10, 176, 300]) {
+  for (const bpm of [10, 176, 250]) {
     const processor = new Processor();
     send(processor, { type: 'config', config: sanitize({ bpm, note: 'sixteenth' }) });
     send(processor, { type: 'start' });
@@ -49,11 +49,11 @@ test('pause stops output and musical time; reset restarts on beat one', () => {
 });
 test('rendered patterns sound only the requested slots, including at tempo limits', () => {
   const offsets = { triplet: [0, 1 / 3, 2 / 3], 'triplet-skip': [0, 2 / 3], 'sixteenth-skip': [0, 3 / 4] };
-  for (const bpm of [10, 176, 300]) {
+  for (const bpm of [10, 176, 250]) {
     for (const [note, fractions] of Object.entries(offsets)) {
       const processor = new Processor();
       send(processor, { type: 'samples', samples: { high: new Float32Array([1]), low: new Float32Array([.5]) } });
-      send(processor, { type: 'config', config: sanitize({ note, bpm }) });
+      send(processor, { type: 'config', config: sanitize({ note, bpm, accents: [true, true, true, true] }) });
       send(processor, { type: 'start' });
       const framesPerBeat = sampleRate * 60 / bpm;
       const length = Math.floor(framesPerBeat * 4);

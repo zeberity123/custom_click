@@ -4,9 +4,9 @@ import { exportDuration } from './export-renderer.js';
 export function setupExport(getConfig) {
   const $ = selector => document.querySelector(selector);
   const dialog = $('#export-dialog');
-  let worker, busy = false, message = '', progress = 0, request = 0;
+  let worker, busy = false, message = '', progress = 0, request = 0, savedFile = '', savedDevice = '';
   function refresh() {
-    $('#export-status').textContent = message ? t(message,{progress}) : '';
+    $('#export-status').textContent = message ? t(message,{progress,filename:savedFile,device:savedDevice}) : '';
     $('#export-progress').hidden = !busy;
     $('#export-progress').value = progress;
     for (const id of ['save-export','export-length','export-unit']) $('#'+id).disabled = busy;
@@ -14,6 +14,7 @@ export function setupExport(getConfig) {
   function stop() {
     request++; worker?.terminate(); worker = null; busy = false;
     window.NativeClick?.cancelExport?.();
+    if (window.IOSClick) void window.IOSClick.call('cancelExport').catch(() => {});
     message = 'Export cancelled.'; refresh();
   }
   $('#open-export').addEventListener('click', () => { message = ''; refresh(); dialog.showModal(); });
@@ -26,7 +27,23 @@ export function setupExport(getConfig) {
   });
   async function save(blob, token, bpm) {
     const filename = `Click-${bpm}bpm.mp3`;
-    if (window.NativeClick) {
+    if (window.IOSClick) {
+      if (!await window.IOSClick.call('beginExport')) throw new Error('exportFailed');
+      for (let offset = 0; offset < blob.size; offset += 32768) {
+        if (token !== request) return;
+        const chunk = new Uint8Array(await blob.slice(offset, offset + 32768).arrayBuffer());
+        if (token !== request) return;
+        if (!await window.IOSClick.call('appendExport', { data: btoa(String.fromCharCode(...chunk)) })) throw new Error('exportFailed');
+      }
+      if (token !== request) return;
+      const result = await window.IOSClick.call('finishExport', { filename });
+      if (token !== request) return;
+      busy = false;
+      savedFile = result.filename ?? filename;
+      savedDevice = result.device === 'iPad' ? 'iPad' : 'iPhone';
+      message = result.saved ? 'MP3 saved: {filename}. Files → On My {device} → Click → Exports.' : 'Export cancelled.';
+      refresh(); return;
+    } else if (window.NativeClick) {
       if (!window.NativeClick.beginExport?.()) throw new Error('exportFailed');
       // Small bridge chunks avoid a large base64 string on the Android UI thread.
       for (let offset = 0; offset < blob.size; offset += 32768) {
@@ -59,7 +76,7 @@ export function setupExport(getConfig) {
     catch (error) { message = error.message; refresh(); return; }
     const token = ++request;
     busy = true; progress = 0; message = 'Exporting… {progress}%'; refresh();
-    function fail() { if (token !== request) return; worker?.terminate(); worker = null; window.NativeClick?.cancelExport?.(); busy = false; message = 'exportFailed'; refresh(); }
+    function fail() { if (token !== request) return; worker?.terminate(); worker = null; window.NativeClick?.cancelExport?.(); if (window.IOSClick) void window.IOSClick.call('cancelExport').catch(() => {}); busy = false; message = 'exportFailed'; refresh(); }
     try {
       worker = new Worker('./export-worker.js');
       worker.onerror = fail;

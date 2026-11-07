@@ -9,10 +9,11 @@ public class RhythmEngineTest {
     public static void main(String[] args) {
         RhythmEngine fresh = new RhythmEngine(new float[]{1}, new float[]{.5f}, (frame,beat,bar,start,click,high)->{});
         check(fresh.config().bpm == 126 && fresh.currentBpm() == 126, "factory tempo must be 126 BPM");
+        check(fresh.config().note.equals("quarter") && java.util.Arrays.equals(fresh.config().accents,new boolean[]{true,false,false,false}), "factory rhythm must be quarter notes with only the first beat high");
         fresh.configure(new RhythmEngine.Config(176,4,4,"eighth",65,0,new boolean[]{true,true,true,true}));
         check(fresh.config().bpm == 176 && fresh.currentBpm() == 176, "saved tempo must override the factory default");
         String[] notes = {"whole","half","quarter","eighth","sixteenth","triplet","triplet-skip","sixteenth-skip"};
-        for (int bpm : new int[]{10,176,300}) {
+        for (int bpm : new int[]{10,176,250}) {
             for (String note : notes) {
                 List<Long> frames = new ArrayList<>();
                 RhythmEngine engine = new RhythmEngine(new float[]{1},new float[]{.5f},(frame,beat,bar,start,click,high)->{if(click) frames.add(frame);});
@@ -80,8 +81,41 @@ public class RhythmEngineTest {
             engine.configure(new RhythmEngine.Config(120,6,8,"triplet-skip",100,0,new boolean[]{true},true,delta,1,"seconds"));
             engine.start(); float[] pcm=new float[960];
             for(int i=0;i<310;i++)engine.render(pcm,480);
-            check(engine.currentBpm()==(delta>0?300:10),"tempo bound");
+            check(engine.currentBpm()==(delta>0?250:10),"tempo bound");
         }
-        System.out.println("PASS: native PCM timing, rests, pause/reset, pan/mute, bar/second automation, resume persistence and tempo bounds.");
+        {   // Preset: change after this bar keeps tempo until the next downbeat.
+            List<long[]> beats = new ArrayList<>();
+            RhythmEngine[] ref = {null};
+            RhythmEngine engine = new RhythmEngine(new float[]{1},new float[]{1},(frame,beat,bar,start,click,high)->{ if(start) beats.add(new long[]{frame,bar,beat,ref[0].currentBpm()}); });
+            ref[0] = engine;
+            engine.configure(new RhythmEngine.Config(120,4,4,"quarter",100,0,new boolean[]{true,true,true,true}));
+            engine.start(); float[] pcm=new float[960];
+            for(int i=0;i<60;i++) engine.render(pcm,480);  // 0.6 s at 120 BPM: beats 1-2 of bar 1 sounded
+            check(beats.size()==2,"pre-change beats");
+            engine.changeTempo(180,true,0);
+            check(engine.currentBpm()==120 && engine.isRamping(),"atBar must wait");
+            check(engine.config().bpm==180,"target stored in config");
+            engine.configure(new RhythmEngine.Config(180,4,4,"quarter",100,0,new boolean[]{true,true,true,true}));
+            check(engine.isRamping(),"matching config must not cancel the pending change");
+            for(int i=0;i<300;i++) engine.render(pcm,480);
+            long[] downbeat = beats.get(4);
+            check(downbeat[1]==2 && downbeat[2]==0 && downbeat[3]==180,"bar 2 downbeat at new tempo");
+            check(beats.get(3)[3]==120,"bar 1 beat 4 at old tempo");
+            check(Math.abs(downbeat[0]-48000*2)<=1,"downbeat timing");
+            check(Math.abs(beats.get(5)[0]-downbeat[0]-16000)<=1,"new beat length");
+        }
+        {   // Preset: gradual change glides over N bars, then lands exactly.
+            RhythmEngine engine = new RhythmEngine(new float[]{1},new float[]{1},null);
+            engine.configure(new RhythmEngine.Config(100,4,4,"quarter",100,0,new boolean[]{true,true,true,true}));
+            engine.start(); float[] pcm=new float[960];
+            engine.render(pcm,480);
+            engine.changeTempo(200,false,2);
+            double last = engine.exactBpm(); boolean rose=false;
+            for(int i=0;i<1000 && engine.isRamping();i++){ engine.render(pcm,480); if(engine.exactBpm()>last) rose=true; check(engine.exactBpm()>=last,"ramp must be monotonic"); last=engine.exactBpm(); }
+            check(rose && !engine.isRamping() && engine.currentBpm()==200 && engine.exactBpm()==200,"ramp lands on target");
+            engine.changeTempo(90,false,8); engine.reset();
+            check(!engine.isRamping() && engine.currentBpm()==90,"reset ends ramp at target");
+        }
+        System.out.println("PASS: native PCM timing, rests, pause/reset, pan/mute, bar/second automation, tempo bounds, and preset tempo changes.");
     }
 }

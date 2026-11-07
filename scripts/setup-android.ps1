@@ -4,7 +4,10 @@ $projectRoot = Split-Path $PSScriptRoot -Parent
 $toolsRoot = Join-Path $projectRoot '.toolchains'
 $sdkRoot = Join-Path $projectRoot '.android-sdk'
 New-Item -ItemType Directory -Force -Path $toolsRoot, $sdkRoot | Out-Null
-$env:JAVA_HOME = 'C:\Program Files\Java\jdk-17'
+if (-not $env:JAVA_HOME) {
+    $bundled = Get-ChildItem -Directory -Path $toolsRoot -Filter 'jdk-17*' -ErrorAction SilentlyContinue | Select-Object -First 1
+    $env:JAVA_HOME = if ($bundled) { $bundled.FullName } else { 'C:\Program Files\Java\jdk-17' }
+}
 if (-not (Test-Path "$env:JAVA_HOME\bin\java.exe")) { throw 'Install JDK 17 or update JAVA_HOME in this setup script.' }
 $archives = @(
     @{Name='commandline.zip'; Url='https://dl.google.com/android/repository/commandlinetools-win-13114758_latest.zip'; Hash='98b565cb657b012dae6794cefc0f66ae1efb4690c699b78a614b4a6a3505b003'; Destination=(Join-Path $sdkRoot 'cmdline-tools\19.0')},
