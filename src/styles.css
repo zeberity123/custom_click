@@ -76,7 +76,7 @@ html.mobile.drawer-open body{overflow:hidden}
 html.mobile.drawer-open .settings-column{transform:translateX(0);visibility:visible}
 @media(max-height:650px){html.mobile .tempo-control{margin:6px 0}html.mobile .tempo-number input{font-size:66px}html.mobile .tap-row{margin:6px 0 10px}html.mobile .beat-section{padding-top:10px}html.mobile .beats{padding:12px 0}html.mobile .transport-caption{margin-top:12px}}
 html.mobile .app-header{flex-wrap:wrap;height:auto;min-height:60px;padding:8px 0;gap:8px}html.mobile .header-actions{gap:6px}html.mobile #language,html.mobile .header-button{font-size:10px;padding:7px;min-height:36px}html.mobile .drawer-toggle{width:100%;justify-content:center;min-height:36px;margin:0 0 4px}html.mobile .metronome{min-height:calc(100dvh - 190px)}html.mobile .automation-fields{grid-template-columns:1fr 1fr}html.mobile .automation-fields label{font-size:12px}
-.tempo-number #live-tempo{font-size:12px;color:var(--accent);letter-spacing:0;margin-top:10px}
+.tempo-number #live-tempo{letter-spacing:0}
 
 /* Compact controls and keyboard hints directly below Tap tempo. */
 .tap-row{margin-bottom:8px}
@@ -138,7 +138,8 @@ html.mobile .drawer-toggle .settings-menu-icon{margin:0;padding:0;justify-self:e
   html.ios .automation-fields select{font-size:13px;padding-left:7px;padding-right:20px;background-position:right 6px center}
 }
 /* ── BPM presets, Tap/Start transport (0.6) ─────────────────────────── */
-.tempo-number #tempo-target{font-size:12px;color:var(--accent);letter-spacing:.5px;margin-top:8px;font-variant-numeric:tabular-nums}
+/* One fixed-height line under the tempo for the preset target or automation start tempo; it never changes the layout. */
+.tempo-number>.tempo-caption{display:block;height:12px;line-height:12px;margin-top:3px;font-size:12px;letter-spacing:.5px;color:var(--accent);white-space:nowrap;font-variant-numeric:tabular-nums}
 .preset-section{border-top:1px solid #303b3a;margin-top:22px;padding:18px 0 20px}
 .preset-heading{position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
 .preset-edit{display:flex;gap:8px}

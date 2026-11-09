@@ -28,7 +28,8 @@ try {
       return true;
     }};
   });
-  await page.evaluate(()=>localStorage.clear());await page.reload();
+  // There are no factory presets; seed two for the playback checks below.
+  await page.evaluate(()=>{localStorage.clear();localStorage.setItem('click-presets-v1',JSON.stringify({list:[200,150]}));});await page.reload();
   for(const size of [{width:834,height:1150},{width:1194,height:786},{width:390,height:760},{width:320,height:568}]) {
     await page.setViewportSize(size);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
@@ -56,6 +57,25 @@ try {
   assert.deepEqual(presetCalls,['tempo','configure']);
   assert.deepEqual(await page.evaluate(()=>window.iosCalls.filter(c=>c.command==='tempo').map(c=>c.payload)),[{bpm:200,atBar:true,bars:4}]);
   await page.locator('#preset-at-bar').uncheck();await page.locator('#preset-gradual').uncheck();
+  // iOS loses localStorage on relaunch (new localhost port), so presets are also saved natively.
+  assert.ok(await page.evaluate(()=>window.iosCalls.some(c=>c.command==='savePresets'&&c.payload.presets.list.join()==='200,150')));
+  // Immediate change: clicks rendered before it still report the old tempo. They must not pull
+  // the display back, or the next +/- step would start from the old tempo.
+  const clicks=detail=>page.evaluate(detail=>window.dispatchEvent(new CustomEvent('ios-clicks',{detail})),detail);
+  const frame=()=>page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  await page.locator('.preset-button').nth(1).click();
+  assert.equal(await page.locator('#bpm').inputValue(),'150');
+  await clicks([{bar:3,beat:3,beatStart:true,click:true,bpm:200}]);await frame();
+  assert.equal(await page.locator('#bpm').inputValue(),'150');
+  await page.locator('#increase').click();
+  assert.equal(await page.locator('#bpm').inputValue(),'151');
+  await clicks([{bar:4,beat:0,beatStart:true,click:true,bpm:150}]);await frame();
+  assert.equal(await page.locator('#bpm').inputValue(),'151');
+  await clicks([{bar:4,beat:1,beatStart:true,click:true,bpm:151}]);await frame();
+  assert.equal(await page.locator('#bpm').inputValue(),'151');
+  // Once confirmed, the engine is the source of truth again.
+  await clicks([{bar:4,beat:2,beatStart:true,click:true,bpm:149}]);await frame();
+  assert.equal(await page.locator('#bpm').inputValue(),'149');
   await page.locator('#play').click();
   await page.getByRole('button',{name:'Start',exact:true}).waitFor();
   assert.ok((await page.locator('#position').textContent()).includes('BAR 01'));

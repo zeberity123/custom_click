@@ -21,7 +21,8 @@ try {
     window.NativeClick.setBackHandlerEnabled=enabled=>{window.backEnabled=enabled;};
     window.NativeClick.cancelExport=()=>window.nativeCalls.push({type:'cancel-export'});
   });
-  await page.evaluate(() => localStorage.clear());
+  // No factory presets: seed the two used by the playback checks below.
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('click-presets-v1', JSON.stringify({list:[200,150]})); });
   await page.setViewportSize({width:390,height:760});await page.reload();
   await page.waitForFunction(()=>document.documentElement.classList.contains('android'));
   assert.equal(await page.locator('#language').inputValue(),'en');

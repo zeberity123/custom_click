@@ -23,7 +23,7 @@ final class ClickViewController: UIViewController, WKNavigationDelegate, WKScrip
         let content = WKUserContentController()
         content.addScriptMessageHandler(self, contentWorld: .page, name: "click")
         var saved: [String: String] = [:]
-        for key in ["click-studio-settings-v1", "click-language"] {
+        for key in ["click-studio-settings-v1", "click-presets-v1", "click-language"] {
             if let value = UserDefaults.standard.string(forKey: key) { saved[key] = value }
         }
         let data = try! JSONSerialization.data(withJSONObject: saved)
@@ -169,6 +169,11 @@ final class ClickViewController: UIViewController, WKNavigationDelegate, WKScrip
             case "saveSettings":
                 if let settings = payload["settings"], let bytes = try? JSONSerialization.data(withJSONObject: settings), bytes.count < 10000 {
                     UserDefaults.standard.set(String(data: bytes, encoding: .utf8), forKey: "click-studio-settings-v1")
+                }; reply(true,nil)
+            case "savePresets":
+                // The page origin uses a new localhost port each launch, so presets live in UserDefaults.
+                if let presets = payload["presets"], let bytes = try? JSONSerialization.data(withJSONObject: presets), bytes.count < 10000 {
+                    UserDefaults.standard.set(String(data: bytes, encoding: .utf8), forKey: "click-presets-v1")
                 }; reply(true,nil)
             case "language":
                 if let language = payload["language"] as? String, ["en","ko","ja"].contains(language) { UserDefaults.standard.set(language,forKey:"click-language") }; reply(true,nil)

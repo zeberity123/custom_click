@@ -15,11 +15,18 @@ try {
   const presets = () => page.locator('.preset-button:not(.empty) strong').allTextContents();
   const bpm = async () => Number(await page.locator('#bpm').inputValue());
 
-  assert.deepEqual(await presets(), ['200', '150', '175', '192']);
+  // No factory presets: the grid starts with 8 empty slots.
+  assert.deepEqual(await presets(), []);
   assert.equal(await page.locator('.preset-button').count(), 8);
   assert.equal(await page.locator('#preset-remove').isDisabled(), true);
   assert.equal(await page.locator('#bpm').getAttribute('max'), '250');
   assert.equal(await page.locator('#tempo-range').getAttribute('max'), '250');
+  assert.equal((await page.locator('#tempo-caption').innerText()).trim(), '');   // 'BEATS PER MINUTE' is gone
+  for (const value of [200, 150, 175, 192]) {
+    await page.locator('#bpm').fill(String(value)); await page.locator('#bpm').press('Enter');
+    await page.locator('#preset-add').click();
+  }
+  assert.deepEqual(await presets(), ['200', '150', '175', '192']);
 
   // Stopped: a preset sets the tempo immediately and becomes the selection.
   await page.locator('.preset-button').nth(1).click();
@@ -54,9 +61,14 @@ try {
   await page.waitForFunction(() => document.querySelector('#position').textContent.includes('BEAT 02'));
   await page.locator('#preset-at-bar').check();
   const bar = Number((await page.locator('#position').textContent()).match(/BAR (\d+)/)[1]);
+  const tempoHeight = async () => (await page.locator('.tempo-control').boundingBox()).height;
+  const heightBefore = await tempoHeight();
   await page.locator('.preset-button').nth(0).click();          // 200
   assert.equal(await bpm(), 120);
   assert.equal(await page.locator('#tempo-target').textContent(), '→ 200 BPM');
+  // The target replaces the caption line instead of adding one, so the layout never grows.
+  assert.equal(await page.locator('#tempo-caption #tempo-target').isVisible(), true);
+  assert.equal(await tempoHeight(), heightBefore);
   assert.equal(await page.locator('.preset-button').nth(0).getAttribute('aria-pressed'), 'true');
   const switched = await page.waitForFunction(() => document.querySelector('#bpm').value === '200' && document.querySelector('#position').textContent, null, { timeout: 4000 });
   const position = await switched.jsonValue();

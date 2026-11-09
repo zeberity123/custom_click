@@ -29,7 +29,7 @@ const phrases = [
   ['Close rhythm and sound','리듬 및 사운드 닫기','リズムとサウンドを閉じる'], ['Click home','Click 홈','Click ホーム'],
   ['TEMPO','템포','テンポ'], ['Tempo','템포','テンポ'], ['Metronome','메트로놈','メトロノーム'],
   ['Tempo in beats per minute','분당 박자 수 (BPM)','テンポ (BPM)'], ['Decrease tempo','템포 낮추기','テンポを下げる'], ['Increase tempo','템포 높이기','テンポを上げる'],
-  ['BEATS PER MINUTE','분당 박자 수','拍／分'], ['Or feel it out','직접 박자를 탭하세요','タップで合わせる'], ['Tap tempo','탭 템포','タップテンポ'], ['Tap at least twice','두 번 이상 탭하세요','2回以上タップ'],
+  ['Or feel it out','직접 박자를 탭하세요','タップで合わせる'], ['Tap tempo','탭 템포','タップテンポ'], ['Tap at least twice','두 번 이상 탭하세요','2回以上タップ'],
   ['BEAT PATTERN','박자 패턴','拍のパターン'], ['Click a beat to switch pitch','박자를 눌러 음높이 변경','拍を押して音の高さを変更'], ['Beat pitch controls','박자별 음높이 설정','拍ごとの音の高さ'],
   ['High','높음','高音'], ['Low','낮음','低音'], ['HIGH','높음','高音'], ['LOW','낮음','低音'],
   ['Reset to first beat','첫 박자로 초기화','最初の拍に戻す'], ['Reset to first beat (R)','첫 박자로 초기화 (R)','最初の拍に戻す (R)'],
