@@ -9,14 +9,19 @@ final class ClickUITests: XCTestCase {
         XCTAssertTrue(start.waitForExistence(timeout: 30),app.debugDescription)
         let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true AND hittable == true"), object: start)
         XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 30), .completed)
+        // There are no factory presets: store the current tempo, then step away from it.
+        let tempoField = app.textFields["Tempo in beats per minute"].firstMatch
+        let saved = try XCTUnwrap(tempoField.value as? String)
+        app.buttons["Add current BPM as a preset"].firstMatch.tap()
+        app.buttons[(Int(saved) ?? 0) > 10 ? "Decrease tempo" : "Increase tempo"].firstMatch.tap()
+        XCTAssertNotEqual(tempoField.value as? String, saved)
         start.tap()
         let stop = app.buttons["Stop"].firstMatch
         XCTAssertTrue(stop.waitForExistence(timeout: 10),app.debugDescription)
         // A preset while playing goes through the native tempo queue and keeps playback running.
         // aria-pressed presets are exposed by WebKit as toggles (XCUI switches).
-        app.switches["Preset 2: 150 BPM"].firstMatch.tap()
-        let tempoField = app.textFields["Tempo in beats per minute"].firstMatch
-        let switched = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == '150'"), object: tempoField)
+        app.switches.matching(NSPredicate(format: "label ENDSWITH %@", ": \(saved) BPM")).firstMatch.tap()
+        let switched = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", saved), object: tempoField)
         XCTAssertEqual(XCTWaiter.wait(for: [switched], timeout: 10), .completed, app.debugDescription)
         XCTAssertTrue(stop.exists)
         XCUIDevice.shared.press(.home)
@@ -80,15 +85,20 @@ final class ClickUITests: XCTestCase {
         let app = XCUIApplication(); app.launch()
         let tempo = app.textFields["Tempo in beats per minute"].firstMatch
         XCTAssertTrue(tempo.waitForExistence(timeout:30))
+        let value = try XCTUnwrap(tempo.value as? String)
         // aria-pressed presets are exposed by WebKit as toggles (XCUI switches).
-        let preset = app.switches["Preset 3: 175 BPM"].firstMatch
+        let preset = app.switches.matching(NSPredicate(format: "label ENDSWITH %@", ": \(value) BPM")).firstMatch
+        app.buttons["Add current BPM as a preset"].firstMatch.tap()
         XCTAssertTrue(preset.waitForExistence(timeout:10), app.debugDescription)
         preset.tap()
-        XCTAssertEqual(tempo.value as? String, "175")
+        XCTAssertEqual(tempo.value as? String, value)
         app.buttons["Delete selected preset"].firstMatch.tap()
         XCTAssertTrue(preset.waitForNonExistence(timeout:5), app.debugDescription)
         app.buttons["Add current BPM as a preset"].firstMatch.tap()
-        XCTAssertTrue(app.switches.matching(NSPredicate(format: "label ENDSWITH ': 175 BPM'")).firstMatch.waitForExistence(timeout:5), app.debugDescription)
+        XCTAssertTrue(preset.waitForExistence(timeout:5), app.debugDescription)
         let shot = XCTAttachment(screenshot: app.screenshot()); shot.lifetime = .keepAlways; add(shot)
+        // The page gets a new localhost origin on every launch; presets must still come back.
+        app.terminate(); app.launch()
+        XCTAssertTrue(preset.waitForExistence(timeout:30), "Presets were lost after relaunch. \(app.debugDescription)")
     }
 }

@@ -2,19 +2,20 @@
 
 A Windows and Android metronome built around the actual high and low clicks in your Cubase recordings, with a #39c5bb teal theme and a matching beat-dot icon.
 
-For another Windows PC, build the portable executable with `npm run package:portable`, then copy **release/portable/Custom-Click-0.7.0-win-x64.exe** and double-click it. No installer, Node.js, or separate sound files are needed on that PC. Published builds are available on [GitHub Releases](https://github.com/zeberity123/custom_click/releases). The executable extracts its bundled runtime into a temporary folder and saves preferences in your Windows user profile. The executable is unsigned.
+For another Windows PC, build the portable executable with `npm run package:portable`, then copy **release/portable/Custom-Click-0.7.1-win-x64.exe** and double-click it. No installer, Node.js, or separate sound files are needed on that PC. Published builds are available on [GitHub Releases](https://github.com/zeberity123/custom_click/releases). The executable extracts its bundled runtime into a temporary folder and saves preferences in your Windows user profile. The executable is unsigned.
 
 Tempo controls: tap **+** or **−** for 1 BPM, or hold for 0.4 seconds to begin changing 10 BPM every 0.25 seconds. Releasing or moving off the button stops the repeat. Tempo stays within 10–250 BPM. This works on Windows, Android, iPad and iPhone.
 
 ## BPM presets (0.7.0)
 
-The space below the tempo slider holds up to **8 BPM preset buttons** (4 × 2). Factory presets are 200, 150, 175 and 192 BPM.
+The space below the tempo slider holds up to **8 BPM preset buttons** (4 × 2). There are no factory presets; the grid starts empty (an untouched 0.7.0 factory list is cleared on update).
 
 - Tap a preset to switch to that tempo. While stopped it simply sets the tempo; while playing the change is scheduled on the audio thread (desktop, Android and iOS) without resetting the bar position or automation.
 - **+** (top right) adds the main tempo number as a new preset (disabled when all 8 slots are full; an existing value is just selected). **−** deletes the selected (highlighted) preset.
-- **Change after this bar**: the new tempo starts on the next downbeat. Until then the target is shown under the tempo (`→ 200 BPM`) and the preset pulses.
+- **Change after this bar**: the new tempo starts on the next downbeat. Until then the target is shown under the tempo (`→ 200 BPM`) and the preset pulses. That line replaces the former "BEATS PER MINUTE" caption and has a fixed height, so the layout never shifts or scrolls.
 - **Gradual change [N] bars**: the tempo glides linearly to the target over N bars (1–64). Combined with *Change after this bar*, the glide starts on the next downbeat.
-- On desktop, keys **1–8** trigger presets. Presets and options are saved locally.
+- On desktop, keys **1–8** trigger presets. Presets and options are saved locally and survive restarts (on iOS they are also kept in the app's native settings, because the page origin changes on every launch).
+- After a direct tempo change (immediate preset, +/−, typed tempo), the display holds the new value until the engine confirms it, so clicks already queued at the old tempo never pull the number (or the next +/− step) back.
 
 Start/Stop has no resume: **Stop always rewinds to bar 1, beat 1**, and every Start begins from the top (lock-screen pause, interruptions and unplugged headphones also stop and rewind). Tap tempo sits where Reset used to be, at half the width of Start.
 
@@ -42,7 +43,7 @@ The MP3 encoder is the unmodified [lamejs 1.2.1](https://github.com/zhuker/lamej
 
 ## Android testing build
 
-The Android port has **minimum SDK 31 (Android 12)** and **target/compile SDK 36 (Android 16)**, with no maximum SDK limit. It is intended to run on Android 12 and newer versions. The sideloadable test APK is **release/android/Custom-Click-0.7.0-android.apk** after building.
+The Android port has **minimum SDK 31 (Android 12)** and **target/compile SDK 36 (Android 16)**, with no maximum SDK limit. It is intended to run on Android 12 and newer versions. The sideloadable test APK is **release/android/Custom-Click-0.7.1-android.apk** after building.
 
 Copy that APK to your phone, open it, and allow installation from the app you use to open the file when Android asks. This is a debug-signed test build (`com.zeberity123.customclick.debug`), not a Play Store release. On Android 13+, allow notifications to get the playback notification and Pause control.
 

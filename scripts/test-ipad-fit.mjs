@@ -9,7 +9,8 @@ const page=await app.firstWindow();
 await page.addInitScript(()=>{window.IOSClick={call:async(c,p)=>{if(c==='ready')return{config:{},playing:false};if(c==='command'){setTimeout(()=>window.dispatchEvent(new CustomEvent('native-state',{detail:{playing:p.type==='start'}})),0);return{playing:p.type==='start'};}return true;}};});
 const cdp=await page.context().newCDPSession(page);
 await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:5});
-await page.evaluate(()=>localStorage.clear()); await page.reload(); await page.waitForSelector('#presets .preset-button');
+// No factory presets: seed a full grid so the worst-case layout is measured.
+await page.evaluate(()=>{ localStorage.clear(); localStorage.setItem('click-presets-v1', JSON.stringify({list:[200,150,175,192,90,100,110,120]})); }); await page.reload(); await page.waitForSelector('#presets .preset-button');
 const sizes=[[1194,786],[834,1150]];
 async function check(label){
   for(const [w,h] of sizes){

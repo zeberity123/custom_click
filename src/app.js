@@ -99,6 +99,18 @@ let position = { bar: 1, beat: 0 };
 let startRequest = 0;
 let tapTimer, tapHintTimer;
 let editingTempo = false;
+// Events already queued before a tempo change still carry the old tempo. After setting a tempo
+// directly, hold it until the engine reports it, so the display and the next +/− step never
+// fall back to the previous value.
+let expectedBpm = null, expectedSince = 0;
+function expectTempo(bpm) { expectedBpm = playing ? bpm : null; expectedSince = performance.now(); }
+function acceptTempo(bpm) {
+  if (expectedBpm !== null) {
+    if (bpm !== expectedBpm && performance.now() - expectedSince < 1500) return;
+    expectedBpm = null;
+  }
+  if (currentBpm !== bpm) { currentBpm = bpm; renderCurrentTempo(); }
+}
 const tapTempo = new TapTempo();
 const noteNames = { whole: 'Whole note', half: 'Half note', quarter: 'Quarter note', eighth: 'Eighth note', sixteenth: 'Sixteenth note', triplet: 'Triplet', 'triplet-skip': 'Triplet · 1 & 3', 'sixteenth-skip': '16ths · 1 & 4' };
 const AudioEngine = isAndroid ? NativeAudio : isIOS ? IOSAudio : ClickAudio;
@@ -139,7 +151,7 @@ function update(patch) {
   const rhythmChanged = ['numerator', 'denominator', 'note', 'automation'].some(key => Object.hasOwn(patch, key) && patch[key] !== config[key]);
   config = sanitize({ ...config, ...patch });
   if (rhythmChanged || (Object.hasOwn(patch, 'bpm') && config.automation.enabled)) { events = []; activeBeat = 0; position = {bar:1,beat:0}; renderPosition(); }
-  if (rhythmChanged || Object.hasOwn(patch, 'bpm')) currentBpm = config.bpm;
+  if (rhythmChanged || Object.hasOwn(patch, 'bpm')) { currentBpm = config.bpm; expectTempo(config.bpm); }
   audio.configure(config);
   persist();
   render();
@@ -197,6 +209,7 @@ function stopPlayback() {
   startRequest++;
   playing = false;
   events = [];
+  expectedBpm = null;
   activeBeat = 0;
   audio.send('reset');
   position = {bar:1,beat:0}; currentBpm = config.bpm; renderPosition(); renderAutomation();
@@ -213,7 +226,7 @@ async function togglePlayback() {
     audio.configure(config);
     $('#error').hidden = true;
     playing = true;
-    events = []; activeBeat = 0; position = {bar:1,beat:0}; currentBpm = config.bpm; renderPosition(); renderCurrentTempo();
+    events = []; expectedBpm = null; activeBeat = 0; position = {bar:1,beat:0}; currentBpm = config.bpm; renderPosition(); renderCurrentTempo();
     audio.send('start');
     renderTransport();
   } catch (error) { showError(t('Could not start audio: {error}',{error:error.message})); }
@@ -296,7 +309,7 @@ function animate() {
     let latestBeat;
     while (events.length && events[0].time <= time) {
       const event = events.shift();
-      if (event.bpm != null && currentBpm !== Math.round(event.bpm)) { currentBpm = Math.round(event.bpm); renderCurrentTempo(); }
+      if (event.bpm != null) acceptTempo(Math.round(event.bpm));
       if (event.beatStart) latestBeat = event;
     }
     if (latestBeat) {
@@ -336,7 +349,6 @@ function renderCurrentTempo() {
   renderPresets();
   const enabled = config.automation.enabled, status = t('Start tempo: {bpm} BPM', {bpm:config.bpm});
   $('#automation-status').textContent = enabled ? status : t('Automation off');
-  $('#tempo-caption').textContent = t('BEATS PER MINUTE');
   $('#live-tempo').hidden = !enabled;
   $('#live-tempo').textContent = status;
 }
@@ -346,12 +358,15 @@ function changeAutomation() {
 $('#automation-enabled').addEventListener('click', () => update({ automation: { ...config.automation, enabled: !config.automation.enabled } }));
 for (const id of ['automation-direction','automation-delta','automation-every','automation-unit']) $('#'+id).addEventListener('change',changeAutomation);
 // BPM presets: up to 8 buttons (4 × 2). The selected preset can be deleted with −; + stores the main tempo.
+// There are no factory presets; the list starts empty.
 const presetKey = 'click-presets-v1';
 const MAX_PRESETS = 8;
+const OLD_FACTORY_PRESETS = '200,150,175,192';
 function loadPresets() {
   let saved = {};
-  try { saved = JSON.parse(localStorage.getItem(presetKey)) ?? {}; } catch { /* Use defaults. */ }
-  const list = Array.isArray(saved.list) ? saved.list : [200, 150, 175, 192];
+  try { saved = JSON.parse(localStorage.getItem(presetKey)) ?? {}; } catch { /* Start empty. */ }
+  // 0.7.0 saved its untouched factory list as soon as any preset was tapped; drop it.
+  const list = Array.isArray(saved.list) && saved.list.join(',') !== OLD_FACTORY_PRESETS ? saved.list : [];
   return {
     list: [...new Set(list.map(Number).filter(Number.isFinite).map(bpm => clampBpm(Math.round(bpm))))].slice(0, MAX_PRESETS),
     selected: Number.isInteger(saved.selected) ? saved.selected : null,
@@ -361,7 +376,11 @@ function loadPresets() {
   };
 }
 const presets = loadPresets();
-function savePresets() { try { localStorage.setItem(presetKey, JSON.stringify(presets)); } catch { /* Ephemeral sessions keep presets in memory. */ } }
+function savePresets() {
+  try { localStorage.setItem(presetKey, JSON.stringify(presets)); } catch { /* Ephemeral sessions keep presets in memory. */ }
+  // iOS serves the page from a new localhost port on every launch, so localStorage does not survive a restart.
+  if (isIOS) void window.IOSClick.call('savePresets', { presets }).catch(() => {});
+}
 function selectedPreset() {
   const index = presets.selected;
   return index !== null && presets.list[index] === config.bpm ? index : null;
@@ -411,7 +430,7 @@ function applyPreset(index) {
   config = sanitize({ ...config, bpm });
   audio.configure(config);
   persist();
-  if (!presets.atBar && !bars && !config.automation.enabled) currentBpm = bpm;
+  if (!presets.atBar && !bars && !config.automation.enabled) { currentBpm = bpm; expectTempo(bpm); }
   renderCurrentTempo();
 }
 $('#preset-add').addEventListener('click', () => {
